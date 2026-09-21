@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f1117">
+  <meta name="description" content="TrainTime - Plataforma esportiva para atletas e treinadores">
+  <title>TrainTime</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <div class="container">
+
+    <div id="home" class="page active">
+      <div class="logo">Train<span class="logo-accent">Time</span></div>
+      <p class="tagline">Treine. Acompanhe. Evolua.</p>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="showRoleSelection('athlete')">Sou Atleta</button>
+        <button class="btn btn-secondary" onclick="showRoleSelection('coach')">Sou Treinador</button>
+      </div>
+    </div>
+
+    <div id="sport-select" class="page">
+      <a class="back-link" onclick="showPage('home')">&#8592; Voltar</a>
+      <div class="section-title">Escolha seu esporte</div>
+      <div id="sport-list" class="btn-group"></div>
+    </div>
+
+    <div id="sport-detail" class="page">
+      <a class="back-link" onclick="showPage('sport-select')">&#8592; Voltar</a>
+      <div class="detail-card">
+        <div style="font-size:2.5rem; margin-bottom:0.5rem;" id="detail-icon"></div>
+        <h2 id="detail-name"></h2>
+
+        <h3>Posicoes</h3>
+        <div id="detail-positions" class="tag-list"></div>
+
+        <h3>Atributos</h3>
+        <div id="detail-attributes" class="tag-list"></div>
+      </div>
+      <div class="status-badge">
+        <span class="status-dot"></span>
+        Fase 1 - Estrutura inicial
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
