@@ -20,6 +20,7 @@ Novos esportes poderao ser adicionados no futuro.
 | Frontend | HTML, CSS, JavaScript |
 | Backend | Python, FastAPI |
 | Banco | SQLite (migravel para PostgreSQL) |
+| Auth | JWT + bcrypt |
 
 ## Como Executar
 
@@ -30,6 +31,18 @@ cd backend
 python -m venv venv
 venv\Scripts\activate      # Windows
 pip install -r requirements.txt
+```
+
+Crie o arquivo `backend/.env`:
+
+```
+SECRET_KEY=sua-chave-secreta
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+ALGORITHM=HS256
+DATABASE_URL=sqlite:///./train_time.db
+```
+
+```bash
 uvicorn app.main:app --reload
 ```
 
@@ -55,6 +68,9 @@ TrainTime/
 │   ├── app/
 │   │   ├── main.py
 │   │   ├── core/
+│   │   │   ├── config.py
+│   │   │   ├── security.py
+│   │   │   └── deps.py
 │   │   ├── models/
 │   │   ├── schemas/
 │   │   ├── services/
@@ -64,11 +80,8 @@ TrainTime/
 │   └── requirements.txt
 ├── frontend/
 │   ├── index.html
-│   ├── pages/
-│   ├── components/
 │   ├── css/
-│   ├── js/
-│   └── assets/
+│   └── js/
 ├── docs/
 ├── README.md
 └── .gitignore
@@ -76,25 +89,30 @@ TrainTime/
 
 ## Fase Atual
 
-**FASE 1** - Fundacao, arquitetura e estrutura inicial
+**FASE 2** - Usuarios, autenticacao e perfis esportivos
 
 ### Implementado
 
 - Estrutura do projeto
 - Backend com FastAPI
 - Banco de dados SQLite com SQLAlchemy
-- Modelos: User, Sport, Position, SportAttribute, Athlete, Coach, Team
-- API: health, sports, positions, attributes
-- Dados iniciais: Volei e Basquete com posicoes e atributos
-- Frontend responsivo mobile-first
-- Identidade visual
-- Testes basicos
+- Modelos: User, Sport, Position, SportAttribute, Athlete, Coach, Team, TeamAthlete, CoachSport, AthleteAttribute
+- Autenticacao JWT com bcrypt
+- Cadastro de atleta (com esporte e posicao)
+- Cadastro de treinador (com esportes)
+- Login e logout
+- Perfil de atleta (GET/PUT)
+- Perfil de treinador (GET/PUT)
+- Atributos esportivos do atleta (0-100)
+- Controle de roles e autorizacao
+- Frontend responsivo mobile-first com login/cadastro/dashboard
+- 35 testes automatizados
 - Documentacao
 
-### Planejado (Fases futuras)
+### PLANEJADO (Fases futuras)
 
-- Autenticacao completa
-- Sistema de treinos
+- Sistema de equipes
+- Treinos e exercicios
 - Acompanhamento de desempenho
 - Avaliacoes de treinadores
 - Escalacoes

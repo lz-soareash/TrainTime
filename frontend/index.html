@@ -12,36 +12,153 @@
 
   <div class="container">
 
-    <div id="home" class="page active">
+    <div id="page-home" class="page active">
       <div class="logo">Train<span class="logo-accent">Time</span></div>
       <p class="tagline">Treine. Acompanhe. Evolua.</p>
       <div class="btn-group">
-        <button class="btn btn-primary" onclick="showRoleSelection('athlete')">Sou Atleta</button>
-        <button class="btn btn-secondary" onclick="showRoleSelection('coach')">Sou Treinador</button>
+        <button class="btn btn-primary" onclick="goToRegister('athlete')">Sou Atleta</button>
+        <button class="btn btn-secondary" onclick="goToRegister('coach')">Sou Treinador</button>
+      </div>
+      <p class="link-text" style="margin-top:1.5rem">
+        Ja tem conta? <a class="link" onclick="showPage('page-login')">Entrar</a>
+      </p>
+    </div>
+
+    <div id="page-login" class="page">
+      <a class="back-link" onclick="showPage('page-home')">&#8592; Voltar</a>
+      <div class="auth-card">
+        <h2 class="auth-title">Entrar</h2>
+        <form id="login-form" onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input class="form-input" type="email" id="login-email" required placeholder="seu@email.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Senha</label>
+            <input class="form-input" type="password" id="login-password" required placeholder="Sua senha" minlength="6">
+          </div>
+          <div id="login-error" class="form-error" style="display:none"></div>
+          <button class="btn btn-primary" type="submit" id="login-btn">Entrar</button>
+        </form>
+        <p class="link-text" style="margin-top:1rem">
+          Nao tem conta? <a class="link" onclick="showPage('page-home')">Criar conta</a>
+        </p>
       </div>
     </div>
 
-    <div id="sport-select" class="page">
-      <a class="back-link" onclick="showPage('home')">&#8592; Voltar</a>
-      <div class="section-title">Escolha seu esporte</div>
-      <div id="sport-list" class="btn-group"></div>
+    <div id="page-register-athlete" class="page">
+      <a class="back-link" onclick="showPage('page-home')">&#8592; Voltar</a>
+      <div class="auth-card">
+        <h2 class="auth-title">Criar Conta - Atleta</h2>
+        <form id="register-athlete-form" onsubmit="handleRegisterAthlete(event)">
+          <div class="form-group">
+            <label class="form-label">Nome</label>
+            <input class="form-input" type="text" id="reg-athlete-name" required placeholder="Seu nome" minlength="2">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input class="form-input" type="email" id="reg-athlete-email" required placeholder="seu@email.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Senha</label>
+            <input class="form-input" type="password" id="reg-athlete-password" required placeholder="Minimo 6 caracteres" minlength="6">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Esporte</label>
+            <select class="form-input" id="reg-athlete-sport" required onchange="loadPositionsForRegister(this.value)">
+              <option value="">Selecione...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Posicao</label>
+            <select class="form-input" id="reg-athlete-position" required>
+              <option value="">Selecione o esporte primeiro</option>
+            </select>
+          </div>
+          <div id="register-athlete-error" class="form-error" style="display:none"></div>
+          <button class="btn btn-primary" type="submit" id="register-athlete-btn">Criar Conta</button>
+        </form>
+        <p class="link-text" style="margin-top:1rem">
+          Ja tem conta? <a class="link" onclick="showPage('page-login')">Entrar</a>
+        </p>
+      </div>
     </div>
 
-    <div id="sport-detail" class="page">
-      <a class="back-link" onclick="showPage('sport-select')">&#8592; Voltar</a>
-      <div class="detail-card">
-        <div style="font-size:2.5rem; margin-bottom:0.5rem;" id="detail-icon"></div>
-        <h2 id="detail-name"></h2>
-
-        <h3>Posicoes</h3>
-        <div id="detail-positions" class="tag-list"></div>
-
-        <h3>Atributos</h3>
-        <div id="detail-attributes" class="tag-list"></div>
+    <div id="page-register-coach" class="page">
+      <a class="back-link" onclick="showPage('page-home')">&#8592; Voltar</a>
+      <div class="auth-card">
+        <h2 class="auth-title">Criar Conta - Treinador</h2>
+        <form id="register-coach-form" onsubmit="handleRegisterCoach(event)">
+          <div class="form-group">
+            <label class="form-label">Nome</label>
+            <input class="form-input" type="text" id="reg-coach-name" required placeholder="Seu nome" minlength="2">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input class="form-input" type="email" id="reg-coach-email" required placeholder="seu@email.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Senha</label>
+            <input class="form-input" type="password" id="reg-coach-password" required placeholder="Minimo 6 caracteres" minlength="6">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Esportes</label>
+            <div id="reg-coach-sports" class="checkbox-group"></div>
+          </div>
+          <div id="register-coach-error" class="form-error" style="display:none"></div>
+          <button class="btn btn-primary" type="submit" id="register-coach-btn">Criar Conta</button>
+        </form>
+        <p class="link-text" style="margin-top:1rem">
+          Ja tem conta? <a class="link" onclick="showPage('page-login')">Entrar</a>
+        </p>
       </div>
+    </div>
+
+    <div id="page-dashboard" class="page">
+      <div class="dashboard-header">
+        <div>
+          <p class="dashboard-greeting" id="dashboard-greeting">Ola!</p>
+          <p class="dashboard-role" id="dashboard-role"></p>
+        </div>
+        <button class="btn-icon" onclick="handleLogout()" title="Sair">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div id="dashboard-athlete" style="display:none">
+        <div class="detail-card">
+          <h3>Meu Perfil</h3>
+          <div class="profile-info">
+            <div class="profile-row">
+              <span class="profile-label">Esporte</span>
+              <span class="profile-value" id="dash-sport">-</span>
+            </div>
+            <div class="profile-row">
+              <span class="profile-label">Posicao</span>
+              <span class="profile-value" id="dash-position">-</span>
+            </div>
+          </div>
+        </div>
+        <div class="detail-card">
+          <h3>Atributos</h3>
+          <div id="dash-attributes" class="tag-list"></div>
+        </div>
+      </div>
+
+      <div id="dashboard-coach" style="display:none">
+        <div class="detail-card">
+          <h3>Esportes</h3>
+          <div id="dash-coach-sports" class="tag-list"></div>
+        </div>
+      </div>
+
       <div class="status-badge">
         <span class="status-dot"></span>
-        Fase 1 - Estrutura inicial
+        Fase 2 - Autenticacao
       </div>
     </div>
 

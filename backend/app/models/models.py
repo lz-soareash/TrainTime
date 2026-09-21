@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Float
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean, Float
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 
@@ -12,8 +12,10 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     name = Column(String(255), nullable=False)
     password_hash = Column(String(255), nullable=False)
-    role = Column(String(20), nullable=False)  # "athlete" or "coach"
+    role = Column(String(20), nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     athlete = relationship("Athlete", back_populates="user", uselist=False)
     coach = relationship("Coach", back_populates="user", uselist=False)
@@ -62,6 +64,7 @@ class Athlete(Base):
     sport = relationship("Sport")
     position = relationship("Position")
     teams = relationship("Team", secondary="team_athletes", back_populates="athletes")
+    attributes = relationship("AthleteAttribute", back_populates="athlete")
 
 
 class Coach(Base):
@@ -72,6 +75,30 @@ class Coach(Base):
 
     user = relationship("User", back_populates="coach")
     teams = relationship("Team", back_populates="coach")
+    sports = relationship("CoachSport", back_populates="coach")
+
+
+class CoachSport(Base):
+    __tablename__ = "coach_sports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    coach_id = Column(Integer, ForeignKey("coaches.id"), nullable=False)
+    sport_id = Column(Integer, ForeignKey("sports.id"), nullable=False)
+
+    coach = relationship("Coach", back_populates="sports")
+    sport = relationship("Sport")
+
+
+class AthleteAttribute(Base):
+    __tablename__ = "athlete_attributes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    athlete_id = Column(Integer, ForeignKey("athletes.id"), nullable=False)
+    attribute_id = Column(Integer, ForeignKey("sport_attributes.id"), nullable=False)
+    value = Column(Float, nullable=False, default=0)
+
+    athlete = relationship("Athlete", back_populates="attributes")
+    attribute = relationship("SportAttribute")
 
 
 class Team(Base):
