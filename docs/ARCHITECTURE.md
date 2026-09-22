@@ -55,6 +55,24 @@ Coach → Team → Workout
 - Filtros: team_id, status
 - Ordenacao: scheduled_at ASC
 
+## Exercicios
+
+```
+Coach → Exercise (por esporte)
+Workout → WorkoutExercise → Exercise
+```
+
+- Treinador cria exercicios vinculados ao seu esporte
+- Exercicio tem tipo (repetitions, duration, distance, mixed)
+- Exercicio e criado por um treinador (created_by)
+- Treinador so edita/exclui seus proprios exercicios
+- Exercicio so e excluido se nao estiver em nenhum treino (409)
+- WorkoutExercise vincula exercicio ao treino com configuracao
+- WorkoutExercise e PLANNING: order, sets, reps, duration, distance, rest, notes
+- Validacao de esporte: exercise.sport_id == team.sport_id
+- Mesmo exercicio pode aparecer varias vezes no mesmo treino
+- Autorizacao: coach proprietario do treino ou atleta da equipe
+
 ## Principios
 
 - Separacao de responsabilidades

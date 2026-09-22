@@ -642,6 +642,97 @@ select.form-input {
   color: var(--text-secondary);
 }
 
+.exercise-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.exercise-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+}
+
+.exercise-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.exercise-card-order {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.exercise-card-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.exercise-card-type {
+  font-size: 0.7rem;
+  color: var(--primary);
+  text-transform: uppercase;
+}
+
+.exercise-card-params {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.exercise-card-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.exercise-select-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.exercise-select-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--bg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.exercise-select-item:hover {
+  border-color: var(--primary);
+}
+
+.exercise-select-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.exercise-select-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.exercise-select-type {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
 .page {
   display: none;
   width: 100%;

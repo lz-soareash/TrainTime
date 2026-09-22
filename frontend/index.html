@@ -274,6 +274,16 @@
           </div>
         </div>
       </div>
+      <div class="detail-card">
+        <div class="section-header">
+          <h3>Exercicios</h3>
+          <button id="btn-add-workout-exercise" class="btn-small btn-primary" style="display:none" onclick="showAddWorkoutExercise()">+ Adicionar</button>
+        </div>
+        <div id="workout-exercises-list" class="exercise-list"></div>
+        <div id="workout-no-exercises" style="display:none">
+          <p class="empty-text">Nenhum exercicio neste treino.</p>
+        </div>
+      </div>
     </div>
 
     <div id="page-edit-workout" class="page">
@@ -326,6 +336,163 @@
         <div id="athlete-workouts-list" class="workout-list"></div>
         <div id="athlete-no-workouts" style="display:none">
           <p class="empty-text">Voce ainda nao possui treinos.</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-add-workout-exercise" class="page">
+      <a class="back-link" onclick="showPage('page-workout-detail')">&#8592; Voltar</a>
+      <div class="auth-card">
+        <h2 class="auth-title">Adicionar Exercicio</h2>
+        <div id="compatible-exercises" class="exercise-select-list"></div>
+        <div id="no-compatible-exercises" style="display:none">
+          <p class="empty-text">Nenhum exercicio compativel.</p>
+        </div>
+        <button class="btn btn-secondary" style="margin-top:1rem" onclick="showCreateExercise()">Criar novo exercicio</button>
+      </div>
+    </div>
+
+    <div id="page-create-exercise" class="page">
+      <a class="back-link" onclick="showPage('page-add-workout-exercise')">&#8592; Voltar</a>
+      <div class="auth-card">
+        <h2 class="auth-title">Novo Exercicio</h2>
+        <form onsubmit="handleCreateExercise(event)">
+          <div class="form-group">
+            <label class="form-label">Nome</label>
+            <input class="form-input" type="text" id="exercise-name" required placeholder="Ex: Agachamento" minlength="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Descricao</label>
+            <input class="form-input" type="text" id="exercise-description" placeholder="Descricao do exercicio">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select class="form-input" id="exercise-type" required>
+              <option value="repetitions">Repeticoes</option>
+              <option value="duration">Duracao</option>
+              <option value="distance">Distancia</option>
+              <option value="mixed">Misto</option>
+            </select>
+          </div>
+          <div id="create-exercise-error" class="form-error" style="display:none"></div>
+          <button class="btn btn-primary" type="submit">Criar exercicio</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="page-configure-exercise" class="page">
+      <a class="back-link" onclick="showPage('page-add-workout-exercise')">&#8592; Voltar</a>
+      <div class="auth-card">
+        <h2 class="auth-title" id="configure-exercise-title">Configurar Exercicio</h2>
+        <form onsubmit="handleAddWorkoutExercise(event)">
+          <div class="form-group">
+            <label class="form-label">Ordem</label>
+            <input class="form-input" type="number" id="we-order" required min="1" value="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Series</label>
+            <input class="form-input" type="number" id="we-sets" placeholder="Ex: 3" min="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Repeticoes</label>
+            <input class="form-input" type="number" id="we-repetitions" placeholder="Ex: 12" min="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Duracao (segundos)</label>
+            <input class="form-input" type="number" id="we-duration" placeholder="Ex: 600" min="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Distancia (metros)</label>
+            <input class="form-input" type="number" id="we-distance" placeholder="Ex: 100" min="1" step="0.1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Descanso (segundos)</label>
+            <input class="form-input" type="number" id="we-rest" placeholder="Ex: 60" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Observacoes</label>
+            <input class="form-input" type="text" id="we-notes" placeholder="Observacoes">
+          </div>
+          <div id="configure-exercise-error" class="form-error" style="display:none"></div>
+          <button class="btn btn-primary" type="submit">Adicionar</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="page-edit-workout-exercise" class="page">
+      <a class="back-link" onclick="showPage('page-workout-detail')">&#8592; Voltar</a>
+      <div class="auth-card">
+        <h2 class="auth-title">Editar Exercicio do Treino</h2>
+        <form onsubmit="handleEditWorkoutExercise(event)">
+          <div class="form-group">
+            <label class="form-label">Ordem</label>
+            <input class="form-input" type="number" id="edit-we-order" required min="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Series</label>
+            <input class="form-input" type="number" id="edit-we-sets" min="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Repeticoes</label>
+            <input class="form-input" type="number" id="edit-we-repetitions" min="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Duracao (segundos)</label>
+            <input class="form-input" type="number" id="edit-we-duration" min="1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Distancia (metros)</label>
+            <input class="form-input" type="number" id="edit-we-distance" min="1" step="0.1">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Descanso (segundos)</label>
+            <input class="form-input" type="number" id="edit-we-rest" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Observacoes</label>
+            <input class="form-input" type="text" id="edit-we-notes">
+          </div>
+          <div id="edit-workout-exercise-error" class="form-error" style="display:none"></div>
+          <button class="btn btn-primary" type="submit">Salvar</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="page-athlete-workout-detail" class="page">
+      <a class="back-link" onclick="showPage('page-athlete-workouts')">&#8592; Voltar</a>
+      <div class="detail-card">
+        <div class="workout-header">
+          <div>
+            <h2 id="ath-workout-detail-title"></h2>
+            <p class="workout-team" id="ath-workout-detail-team"></p>
+          </div>
+        </div>
+      </div>
+      <div class="detail-card">
+        <div class="profile-info">
+          <div class="profile-row">
+            <span class="profile-label">Status</span>
+            <span class="profile-value workout-status" id="ath-workout-detail-status"></span>
+          </div>
+          <div class="profile-row">
+            <span class="profile-label">Data</span>
+            <span class="profile-value" id="ath-workout-detail-date"></span>
+          </div>
+          <div class="profile-row">
+            <span class="profile-label">Horario</span>
+            <span class="profile-value" id="ath-workout-detail-time"></span>
+          </div>
+          <div class="profile-row">
+            <span class="profile-label">Duracao</span>
+            <span class="profile-value" id="ath-workout-detail-duration"></span>
+          </div>
+        </div>
+      </div>
+      <div class="detail-card">
+        <h3>Exercicios</h3>
+        <div id="ath-workout-exercises-list" class="exercise-list"></div>
+        <div id="ath-workout-no-exercises" style="display:none">
+          <p class="empty-text">Nenhum exercicio neste treino.</p>
         </div>
       </div>
     </div>

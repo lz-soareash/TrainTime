@@ -30,6 +30,7 @@ class Sport(Base):
 
     positions = relationship("Position", back_populates="sport")
     attributes = relationship("SportAttribute", back_populates="sport")
+    exercises = relationship("Exercise", back_populates="sport")
 
 
 class Position(Base):
@@ -139,3 +140,41 @@ class Workout(Base):
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     team = relationship("Team", back_populates="workouts")
+    exercises = relationship("WorkoutExercise", back_populates="workout", order_by="WorkoutExercise.order")
+
+
+class Exercise(Base):
+    __tablename__ = "exercises"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(String(500), nullable=True)
+    sport_id = Column(Integer, ForeignKey("sports.id"), nullable=False)
+    exercise_type = Column(String(20), nullable=False, default="repetitions")
+    created_by = Column(Integer, ForeignKey("coaches.id"), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    sport = relationship("Sport", back_populates="exercises")
+    creator = relationship("Coach")
+    workout_exercises = relationship("WorkoutExercise", back_populates="exercise")
+
+
+class WorkoutExercise(Base):
+    __tablename__ = "workout_exercises"
+
+    id = Column(Integer, primary_key=True, index=True)
+    workout_id = Column(Integer, ForeignKey("workouts.id"), nullable=False)
+    exercise_id = Column(Integer, ForeignKey("exercises.id"), nullable=False)
+    order = Column(Integer, nullable=False, default=1)
+    sets = Column(Integer, nullable=True)
+    repetitions = Column(Integer, nullable=True)
+    duration_seconds = Column(Integer, nullable=True)
+    distance_meters = Column(Float, nullable=True)
+    rest_seconds = Column(Integer, nullable=True)
+    notes = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    workout = relationship("Workout", back_populates="exercises")
+    exercise = relationship("Exercise", back_populates="workout_exercises")

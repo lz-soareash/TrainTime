@@ -2,6 +2,9 @@ const API_BASE = '/api';
 let currentSports = [];
 let currentTeamId = null;
 let currentWorkoutId = null;
+let currentWorkoutExerciseId = null;
+let currentExerciseSportId = null;
+let currentExerciseId = null;
 let currentUserRole = null;
 
 function getToken() {
@@ -601,6 +604,7 @@ async function openWorkout(workoutId) {
     document.getElementById('workout-detail-duration').textContent = workout.duration_minutes ? `${workout.duration_minutes} minutos` : '-';
     document.getElementById('workout-detail-desc').textContent = workout.description || '-';
 
+    await loadWorkoutExercises(workoutId);
     showPage('page-workout-detail');
   } catch (err) {
     console.error('Failed to open workout:', err);
@@ -663,7 +667,7 @@ async function loadAthleteWorkouts() {
         const dateStr = date.toLocaleDateString('pt-BR');
         const timeStr = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         container.innerHTML += `
-          <div class="workout-card" onclick="openWorkout(${w.id})">
+          <div class="workout-card" onclick="openAthleteWorkout(${w.id})">
             <span class="workout-card-title">${w.title}</span>
             <div class="workout-card-meta">
               <span class="workout-team-label">${w.team_name}</span>
@@ -677,6 +681,259 @@ async function loadAthleteWorkouts() {
     }
   } catch (e) {
     console.error('Failed to load athlete workouts:', e);
+  }
+}
+
+async function openAthleteWorkout(workoutId) {
+  currentWorkoutId = workoutId;
+  try {
+    const workout = await apiGet(`/workouts/${workoutId}`);
+    document.getElementById('ath-workout-detail-title').textContent = workout.title;
+    document.getElementById('ath-workout-detail-team').textContent = `Equipe: ${workout.team.name}`;
+
+    const statusMap = { scheduled: 'Agendado', completed: 'Concluido', cancelled: 'Cancelado' };
+    const statusEl = document.getElementById('ath-workout-detail-status');
+    statusEl.textContent = statusMap[workout.status] || workout.status;
+    statusEl.className = `profile-value workout-status workout-status-${workout.status}`;
+
+    const date = new Date(workout.scheduled_at);
+    document.getElementById('ath-workout-detail-date').textContent = date.toLocaleDateString('pt-BR');
+    document.getElementById('ath-workout-detail-time').textContent = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('ath-workout-detail-duration').textContent = workout.duration_minutes ? `${workout.duration_minutes} minutos` : '-';
+
+    loadWorkoutExercisesForAthlete(workoutId);
+    showPage('page-athlete-workout-detail');
+  } catch (err) {
+    console.error('Failed to open athlete workout:', err);
+  }
+}
+
+async function loadWorkoutExercisesForAthlete(workoutId) {
+  try {
+    const wes = await apiGet(`/workouts/${workoutId}/exercises`);
+    const container = document.getElementById('ath-workout-exercises-list');
+    const noExercises = document.getElementById('ath-workout-no-exercises');
+    container.innerHTML = '';
+    if (wes.length === 0) {
+      container.style.display = 'none';
+      noExercises.style.display = 'block';
+    } else {
+      container.style.display = 'flex';
+      noExercises.style.display = 'none';
+      wes.forEach(we => {
+        container.innerHTML += renderExerciseCard(we, false);
+      });
+    }
+  } catch (e) {
+    console.error('Failed to load athlete exercises:', e);
+  }
+}
+
+function renderExerciseCard(we, isCoach) {
+  const params = [];
+  if (we.sets) params.push(`${we.sets} series`);
+  if (we.repetitions) params.push(`${we.repetitions} reps`);
+  if (we.duration_seconds) params.push(`${we.duration_seconds}s`);
+  if (we.distance_meters) params.push(`${we.distance_meters}m`);
+  if (we.rest_seconds) params.push(`${we.rest_seconds}s descanso`);
+
+  const actionsHtml = isCoach ? `
+    <div class="exercise-card-actions">
+      <button class="btn-icon" onclick="showEditWorkoutExercise(${we.id})" title="Editar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+      </button>
+      <button class="btn-icon" onclick="handleDeleteWorkoutExercise(${we.id})" title="Excluir">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+        </svg>
+      </button>
+    </div>
+  ` : '';
+
+  return `
+    <div class="exercise-card">
+      <div class="exercise-card-header">
+        <div>
+          <span class="exercise-card-order">${we.order}.</span>
+          <span class="exercise-card-name">${we.exercise.name}</span>
+          <span class="exercise-card-type">${we.exercise.exercise_type}</span>
+        </div>
+        ${actionsHtml}
+      </div>
+      <div class="exercise-card-params">
+        ${params.map(p => `<span>${p}</span>`).join('')}
+        ${we.notes ? `<span>${we.notes}</span>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+async function loadWorkoutExercises(workoutId) {
+  try {
+    const wes = await apiGet(`/workouts/${workoutId}/exercises`);
+    const container = document.getElementById('workout-exercises-list');
+    const noExercises = document.getElementById('workout-no-exercises');
+    const isCoach = currentUserRole === 'coach';
+    document.getElementById('btn-add-workout-exercise').style.display = isCoach ? 'inline-flex' : 'none';
+
+    container.innerHTML = '';
+    if (wes.length === 0) {
+      container.style.display = 'none';
+      noExercises.style.display = 'block';
+    } else {
+      container.style.display = 'flex';
+      noExercises.style.display = 'none';
+      wes.forEach(we => {
+        container.innerHTML += renderExerciseCard(we, isCoach);
+      });
+    }
+  } catch (e) {
+    console.error('Failed to load workout exercises:', e);
+  }
+}
+
+async function showAddWorkoutExercise() {
+  try {
+    const workout = await apiGet(`/workouts/${currentWorkoutId}`);
+    currentExerciseSportId = workout.team.sport_id;
+    const exercises = await apiGet(`/exercises?sport_id=${currentExerciseSportId}`);
+    const container = document.getElementById('compatible-exercises');
+    const noExercises = document.getElementById('no-compatible-exercises');
+    container.innerHTML = '';
+    if (exercises.length === 0) {
+      container.style.display = 'none';
+      noExercises.style.display = 'block';
+    } else {
+      container.style.display = 'flex';
+      noExercises.style.display = 'none';
+      exercises.forEach(e => {
+        container.innerHTML += `
+          <div class="exercise-select-item" onclick="showConfigureExercise(${e.id}, '${e.name}')">
+            <div class="exercise-select-info">
+              <span class="exercise-select-name">${e.name}</span>
+              <span class="exercise-select-type">${e.exercise_type}</span>
+            </div>
+            <span style="color:var(--text-secondary)">+</span>
+          </div>
+        `;
+      });
+    }
+    showPage('page-add-workout-exercise');
+  } catch (e) {
+    console.error('Failed to load compatible exercises:', e);
+  }
+}
+
+function showConfigureExercise(exerciseId, exerciseName) {
+  currentExerciseId = exerciseId;
+  document.getElementById('configure-exercise-title').textContent = `Configurar: ${exerciseName}`;
+  document.getElementById('we-order').value = '1';
+  document.getElementById('we-sets').value = '';
+  document.getElementById('we-repetitions').value = '';
+  document.getElementById('we-duration').value = '';
+  document.getElementById('we-distance').value = '';
+  document.getElementById('we-rest').value = '';
+  document.getElementById('we-notes').value = '';
+  hideError('configure-exercise-error');
+  showPage('page-configure-exercise');
+}
+
+async function handleAddWorkoutExercise(e) {
+  e.preventDefault();
+  hideError('configure-exercise-error');
+  const data = {
+    exercise_id: currentExerciseId,
+    order: parseInt(document.getElementById('we-order').value),
+    sets: document.getElementById('we-sets').value ? parseInt(document.getElementById('we-sets').value) : null,
+    repetitions: document.getElementById('we-repetitions').value ? parseInt(document.getElementById('we-repetitions').value) : null,
+    duration_seconds: document.getElementById('we-duration').value ? parseInt(document.getElementById('we-duration').value) : null,
+    distance_meters: document.getElementById('we-distance').value ? parseFloat(document.getElementById('we-distance').value) : null,
+    rest_seconds: document.getElementById('we-rest').value ? parseInt(document.getElementById('we-rest').value) : null,
+    notes: document.getElementById('we-notes').value || null,
+  };
+  try {
+    await apiPost(`/workouts/${currentWorkoutId}/exercises`, data);
+    await openWorkout(currentWorkoutId);
+  } catch (err) {
+    showError('configure-exercise-error', err.message);
+  }
+}
+
+async function showEditWorkoutExercise(weId) {
+  currentWorkoutExerciseId = weId;
+  try {
+    const wes = await apiGet(`/workouts/${currentWorkoutId}/exercises`);
+    const we = wes.find(w => w.id === weId);
+    if (!we) return;
+    document.getElementById('edit-we-order').value = we.order;
+    document.getElementById('edit-we-sets').value = we.sets || '';
+    document.getElementById('edit-we-repetitions').value = we.repetitions || '';
+    document.getElementById('edit-we-duration').value = we.duration_seconds || '';
+    document.getElementById('edit-we-distance').value = we.distance_meters || '';
+    document.getElementById('edit-we-rest').value = we.rest_seconds || '';
+    document.getElementById('edit-we-notes').value = we.notes || '';
+    hideError('edit-workout-exercise-error');
+    showPage('page-edit-workout-exercise');
+  } catch (e) {
+    console.error('Failed to load workout exercise:', e);
+  }
+}
+
+async function handleEditWorkoutExercise(e) {
+  e.preventDefault();
+  hideError('edit-workout-exercise-error');
+  const data = {
+    order: parseInt(document.getElementById('edit-we-order').value),
+    sets: document.getElementById('edit-we-sets').value ? parseInt(document.getElementById('edit-we-sets').value) : null,
+    repetitions: document.getElementById('edit-we-repetitions').value ? parseInt(document.getElementById('edit-we-repetitions').value) : null,
+    duration_seconds: document.getElementById('edit-we-duration').value ? parseInt(document.getElementById('edit-we-duration').value) : null,
+    distance_meters: document.getElementById('edit-we-distance').value ? parseFloat(document.getElementById('edit-we-distance').value) : null,
+    rest_seconds: document.getElementById('edit-we-rest').value ? parseInt(document.getElementById('edit-we-rest').value) : null,
+    notes: document.getElementById('edit-we-notes').value || null,
+  };
+  try {
+    await apiPut(`/workouts/${currentWorkoutId}/exercises/${currentWorkoutExerciseId}`, data);
+    await openWorkout(currentWorkoutId);
+  } catch (err) {
+    showError('edit-workout-exercise-error', err.message);
+  }
+}
+
+async function handleDeleteWorkoutExercise(weId) {
+  if (!confirm('Remover este exercicio do treino?')) return;
+  try {
+    await apiDelete(`/workouts/${currentWorkoutId}/exercises/${weId}`);
+    await openWorkout(currentWorkoutId);
+  } catch (e) {
+    console.error('Failed to delete workout exercise:', e);
+  }
+}
+
+function showCreateExercise() {
+  document.getElementById('exercise-name').value = '';
+  document.getElementById('exercise-description').value = '';
+  document.getElementById('exercise-type').value = 'repetitions';
+  hideError('create-exercise-error');
+  showPage('page-create-exercise');
+}
+
+async function handleCreateExercise(e) {
+  e.preventDefault();
+  hideError('create-exercise-error');
+  try {
+    const exercise = await apiPost('/exercises', {
+      name: document.getElementById('exercise-name').value,
+      description: document.getElementById('exercise-description').value || null,
+      sport_id: currentExerciseSportId,
+      exercise_type: document.getElementById('exercise-type').value,
+    });
+    showConfigureExercise(exercise.id, exercise.name);
+  } catch (err) {
+    showError('create-exercise-error', err.message);
   }
 }
 
