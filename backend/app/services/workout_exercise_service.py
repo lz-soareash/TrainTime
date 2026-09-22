@@ -90,7 +90,7 @@ def list_workout_exercises(db: Session, workout_id: int, user_id: int, role: str
     ).filter(WorkoutExercise.workout_id == workout_id).order_by(WorkoutExercise.order.asc()).all()
 
 
-def update_workout_exercise(db: Session, we_id: int, coach_id: int,
+def update_workout_exercise(db: Session, workout_id: int, we_id: int, coach_id: int,
                             order: int | None = None, sets: int | None = None,
                             repetitions: int | None = None,
                             duration_seconds: int | None = None,
@@ -99,6 +99,8 @@ def update_workout_exercise(db: Session, we_id: int, coach_id: int,
                             notes: str | None = None) -> WorkoutExercise:
     we = get_workout_exercise_by_id(db, we_id)
     if not we:
+        raise LookupError("Exercicio do treino nao encontrado")
+    if we.workout_id != workout_id:
         raise LookupError("Exercicio do treino nao encontrado")
 
     _verify_workout_coach(db, we.workout_id, coach_id)
@@ -122,9 +124,11 @@ def update_workout_exercise(db: Session, we_id: int, coach_id: int,
     return get_workout_exercise_by_id(db, we.id)
 
 
-def delete_workout_exercise(db: Session, we_id: int, coach_id: int) -> None:
+def delete_workout_exercise(db: Session, workout_id: int, we_id: int, coach_id: int) -> None:
     we = db.query(WorkoutExercise).filter(WorkoutExercise.id == we_id).first()
     if not we:
+        raise LookupError("Exercicio do treino nao encontrado")
+    if we.workout_id != workout_id:
         raise LookupError("Exercicio do treino nao encontrado")
 
     _verify_workout_coach(db, we.workout_id, coach_id)

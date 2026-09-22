@@ -70,6 +70,8 @@ def get_team(
         raise HTTPException(status_code=404, detail="Equipe nao encontrada")
 
     if current_user.role == "coach":
+        if current_user.coach is None:
+            raise HTTPException(status_code=404, detail="Perfil de treinador nao encontrado")
         if team.coach_id != current_user.coach.id:
             raise HTTPException(status_code=403, detail="Acesso negado")
     elif current_user.role == "athlete":
@@ -130,6 +132,8 @@ def list_team_athletes(
         raise HTTPException(status_code=404, detail="Equipe nao encontrada")
 
     if current_user.role == "coach":
+        if current_user.coach is None:
+            raise HTTPException(status_code=404, detail="Perfil de treinador nao encontrado")
         if team.coach_id != current_user.coach.id:
             raise HTTPException(status_code=403, detail="Acesso negado")
     elif current_user.role == "athlete":

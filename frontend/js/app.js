@@ -290,6 +290,9 @@ async function loadDashboard() {
     currentUserRole = user.role;
     renderAppHeader(user);
 
+    document.getElementById('menu-attributes').style.display = user.role === 'athlete' ? 'flex' : 'none';
+    document.getElementById('menu-exercises').style.display = user.role === 'coach' ? 'flex' : 'none';
+
     document.getElementById('sidebar-name').textContent = user.name;
     document.getElementById('sidebar-avatar').textContent = initials(user.name);
 
@@ -442,6 +445,15 @@ function renderSidebar(isAthlete, profile, attributes) {
       });
     }
   }
+
+  block.innerHTML += `
+    <div class="sidebar-actions">
+      <button class="btn btn-secondary btn-sm" onclick="showProfileEdit()">Editar perfil</button>
+      ${isAthlete
+        ? '<button class="btn btn-secondary btn-sm" onclick="showAttributesEdit()">Avaliar atributos</button>'
+        : '<button class="btn btn-secondary btn-sm" onclick="openExerciseLibrary()">Biblioteca de exercícios</button>'}
+    </div>
+  `;
 }
 
 function renderMainCards(isAthlete, teamCount, scheduledCount, totalWorkouts) {
@@ -1143,6 +1155,359 @@ async function handleCreateExercise(e) {
     showConfigureExercise(exercise.id, exercise.name);
   } catch (err) {
     showError('create-exercise-error', err.message);
+  }
+}
+
+function showSuccess(elementId, message) {
+  const el = document.getElementById(elementId);
+  el.textContent = message;
+  el.style.display = 'block';
+}
+
+function hideSuccess(elementId) {
+  const el = document.getElementById(elementId);
+  if (el) el.style.display = 'none';
+}
+
+// ========== PROFILE EDIT ==========
+
+async function showProfileEdit() {
+  hideError('profile-edit-error');
+  hideSuccess('profile-edit-success');
+  const isAthlete = currentUserRole === 'athlete';
+  document.getElementById('profile-edit-title').textContent = isAthlete ? 'Editar Perfil do Atleta' : 'Editar Perfil do Treinador';
+  document.getElementById('profile-edit-sport-group').style.display = isAthlete ? 'block' : 'none';
+  document.getElementById('profile-edit-position-group').style.display = isAthlete ? 'block' : 'none';
+  document.getElementById('profile-edit-sports-group').style.display = isAthlete ? 'none' : 'block';
+  document.getElementById('profile-edit-name').value = document.getElementById('sidebar-name').textContent;
+  try {
+    const sports = currentSports.length ? currentSports : await apiGet('/sports');
+    if (isAthlete) {
+      const profile = await apiGet('/athletes/me');
+      const sportSel = document.getElementById('profile-edit-sport');
+      sportSel.innerHTML = '<option value="">Nenhum</option>' + sports.map(s => `<option value="${s.id}">${s.icon || ''} ${s.name}</option>`).join('');
+      sportSel.value = profile.sport ? profile.sport.id : '';
+      await loadProfilePositions(profile.sport ? profile.sport.id : null, profile.position ? profile.position.id : null);
+    } else {
+      const profile = await apiGet('/coaches/me');
+      const container = document.getElementById('profile-edit-coach-sports');
+      const owns = new Set((profile.sports || []).map(s => s.id));
+      container.innerHTML = sports.map(s => `
+        <div class="checkbox-item">
+          <input type="checkbox" id="profile-coach-sport-${s.id}" value="${s.id}" ${owns.has(s.id) ? 'checked' : ''}>
+          <label for="profile-coach-sport-${s.id}">${s.icon || ''} ${s.name}</label>
+        </div>
+      `).join('');
+    }
+    showPage('page-profile-edit');
+  } catch (err) {
+    showError('profile-edit-error', err.message);
+  }
+}
+
+async function loadProfilePositions(sportId, selectedPositionId) {
+  const posSel = document.getElementById('profile-edit-position');
+  if (!sportId) {
+    posSel.innerHTML = '<option value="">Nenhuma posição</option>';
+    return;
+  }
+  try {
+    const positions = await apiGet(`/sports/${sportId}/positions`);
+    posSel.innerHTML = '<option value="">Nenhuma posição</option>' + positions.map(p =>
+      `<option value="${p.id}" ${p.id === selectedPositionId ? 'selected' : ''}>${p.name}</option>`
+    ).join('');
+  } catch (err) {
+    console.error('Failed to load positions:', err);
+  }
+}
+
+async function onProfileSportChange() {
+  const sportVal = document.getElementById('profile-edit-sport').value;
+  await loadProfilePositions(sportVal ? parseInt(sportVal, 10) : null, null);
+}
+
+async function handleProfileEdit(e) {
+  e.preventDefault();
+  hideError('profile-edit-error');
+  hideSuccess('profile-edit-success');
+  const btn = document.getElementById('profile-edit-btn');
+  const name = document.getElementById('profile-edit-name').value;
+  const finish = () => {
+    btn.disabled = false;
+    btn.textContent = 'Salvar';
+  };
+  if (currentUserRole !== 'athlete') {
+    const checked = document.querySelectorAll('#profile-edit-coach-sports input[type="checkbox"]:checked');
+    const sportIds = Array.from(checked).map(c => parseInt(c.value, 10));
+    if (sportIds.length === 0) {
+      showError('profile-edit-error', 'Selecione pelo menos um esporte');
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+    try {
+      await apiPut('/coaches/me', { name, sport_ids: sportIds });
+      showSuccess('profile-edit-success', 'Perfil atualizado com sucesso.');
+      await loadDashboard();
+    } catch (err) {
+      showError('profile-edit-error', err.message);
+    } finally {
+      finish();
+    }
+    return;
+  }
+  const sportVal = document.getElementById('profile-edit-sport').value;
+  const posVal = document.getElementById('profile-edit-position').value;
+  const sportId = sportVal ? parseInt(sportVal, 10) : null;
+  const positionId = sportId && posVal ? parseInt(posVal, 10) : null;
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+  try {
+    await apiPut('/athletes/me', { name, sport_id: sportId, position_id: positionId });
+    showSuccess('profile-edit-success', 'Perfil atualizado com sucesso.');
+    await loadDashboard();
+  } catch (err) {
+    showError('profile-edit-error', err.message);
+  } finally {
+    finish();
+  }
+}
+
+// ========== ATHLETE ATTRIBUTES ==========
+
+let currentAttributesSportId = null;
+
+async function showAttributesEdit() {
+  hideError('attributes-edit-error-msg');
+  hideSuccess('attributes-edit-success');
+  const loading = document.getElementById('attributes-edit-loading');
+  const errBox = document.getElementById('attributes-edit-error');
+  loading.innerHTML = skeletonCards(3);
+  errBox.style.display = 'none';
+  document.getElementById('attributes-form-wrap').style.display = 'none';
+  try {
+    const profile = await apiGet('/athletes/me');
+    if (!profile.sport) {
+      loading.innerHTML = '';
+      errBox.innerHTML = emptyStateHTML('🎯', 'Nenhum esporte definido', 'Defina um esporte no seu perfil para avaliar seus atributos.',
+        '<button class="btn btn-primary btn-sm" onclick="showProfileEdit()">Editar perfil</button>');
+      errBox.style.display = 'flex';
+      return;
+    }
+    const [catalog, values] = await Promise.all([
+      apiGet(`/sports/${profile.sport.id}/attributes`),
+      apiGet('/athletes/me/attributes'),
+    ]);
+    currentAttributesSportId = profile.sport.id;
+    const valueMap = {};
+    values.forEach(v => { valueMap[v.attribute_id] = v.value; });
+    loading.innerHTML = '';
+    const fields = document.getElementById('attributes-fields');
+    fields.innerHTML = catalog.map(a => {
+      const val = valueMap[a.id] != null ? valueMap[a.id] : 50;
+      return `
+        <div class="attribute-field">
+          <div class="attribute-field-head">
+            <span class="attribute-name">${a.name}</span>
+            <output class="attribute-value" id="attr-output-${a.id}" for="attr-input-${a.id}">${val}</output>
+          </div>
+          <input type="range" class="attribute-range" id="attr-input-${a.id}" min="0" max="100" step="1" value="${val}" oninput="document.getElementById('attr-output-${a.id}').value = this.value">
+        </div>
+      `;
+    }).join('');
+    document.getElementById('attributes-form-wrap').style.display = 'block';
+    showPage('page-attributes-edit');
+  } catch (err) {
+    loading.innerHTML = '';
+    errBox.innerHTML = `
+      <span class="error-icon" aria-hidden="true">⚠️</span>
+      <strong>Não foi possível carregar seus atributos.</strong>
+      <p>${err.message}</p>
+      <button class="btn btn-secondary btn-sm" onclick="showAttributesEdit()">Tentar novamente</button>
+    `;
+    errBox.style.display = 'flex';
+  }
+}
+
+async function handleAttributesEdit(e) {
+  e.preventDefault();
+  hideError('attributes-edit-error-msg');
+  hideSuccess('attributes-edit-success');
+  const btn = document.getElementById('attributes-save-btn');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+  try {
+    const catalog = await apiGet(`/sports/${currentAttributesSportId}/attributes`);
+    const attributes = catalog.map(a => ({
+      attribute_id: a.id,
+      value: parseInt(document.getElementById(`attr-input-${a.id}`).value, 10),
+    }));
+    await apiPut('/athletes/me/attributes', { attributes });
+    showSuccess('attributes-edit-success', 'Avaliação salva com sucesso.');
+    await loadDashboard();
+  } catch (err) {
+    showError('attributes-edit-error-msg', err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Salvar avaliação';
+  }
+}
+
+// ========== EXERCISE LIBRARY (coach) ==========
+
+let currentCoachId = null;
+let libraryEditExerciseId = null;
+
+function librarySportName(sportId) {
+  const s = currentSports.find(x => x.id === sportId);
+  return s ? `${s.icon || ''} ${s.name}` : 'Esporte';
+}
+
+function hideLibraryFeedback() {
+  document.getElementById('library-feedback').style.display = 'none';
+}
+
+function showLibraryFeedback(message) {
+  const el = document.getElementById('library-feedback');
+  el.textContent = message;
+  el.style.display = 'block';
+}
+
+async function openExerciseLibrary() {
+  hideLibraryFeedback();
+  hideError('lib-exercise-form-error');
+  try {
+    const profile = await apiGet('/coaches/me');
+    currentCoachId = profile.id;
+    const sports = profile.sports || [];
+    const filter = document.getElementById('library-sport-filter');
+    filter.innerHTML = '<option value="">Todos os esportes</option>' + sports.map(s =>
+      `<option value="${s.id}">${s.icon || ''} ${s.name}</option>`).join('');
+    const sportSel = document.getElementById('lib-exercise-sport');
+    sportSel.innerHTML = sports.map(s =>
+      `<option value="${s.id}">${s.icon || ''} ${s.name}</option>`).join('');
+    document.getElementById('library-sport-filter').value = '';
+  } catch (err) {
+    showLibraryFeedback(err.message);
+  }
+  await loadExerciseLibrary();
+  showPage('page-exercise-library');
+}
+
+async function loadExerciseLibrary() {
+  const loading = document.getElementById('library-exercises-loading');
+  const list = document.getElementById('library-exercises-list');
+  const noExercises = document.getElementById('library-no-exercises');
+  loading.innerHTML = skeletonCards(3);
+  list.style.display = 'none';
+  noExercises.style.display = 'none';
+  const sportId = document.getElementById('library-sport-filter').value;
+  try {
+    const exercises = await apiGet(`/exercises${sportId ? `?sport_id=${sportId}` : ''}`);
+    loading.innerHTML = '';
+    list.innerHTML = '';
+    if (exercises.length === 0) {
+      list.style.display = 'none';
+      noExercises.style.display = 'flex';
+      noExercises.innerHTML = emptyStateHTML('🏋️', 'Nenhum exercício encontrado', 'Crie exercícios para montar sua biblioteca reutilizável de treinos.',
+        '<button class="btn btn-primary btn-sm" onclick="showLibraryForm(\'create\')">+ Novo exercício</button>');
+      return;
+    }
+    list.style.display = 'flex';
+    exercises.forEach(ex => {
+      const mine = currentCoachId != null && ex.created_by === currentCoachId;
+      const actions = mine ? `
+        <div class="exercise-card-actions">
+          <button class="btn-icon" onclick="showLibraryForm('edit', ${ex.id})" title="Editar" aria-label="Editar exercício">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="btn-icon btn-icon--danger" onclick="handleLibraryDeleteExercise(${ex.id})" title="Excluir" aria-label="Excluir exercício">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>` : '';
+      list.innerHTML += `
+        <div class="exercise-select-item library-row">
+          <div class="exercise-select-info">
+            <span class="exercise-select-name">${ex.name}</span>
+            <span class="exercise-select-type">${exerciseTypeLabel(ex.exercise_type)} · ${librarySportName(ex.sport_id)}${mine ? '' : ' · outro treinador'}</span>
+          </div>
+          ${actions}
+        </div>
+      `;
+    });
+  } catch (err) {
+    loading.innerHTML = '';
+    list.style.display = 'none';
+    noExercises.style.display = 'none';
+    showLibraryFeedback(`Não foi possível carregar os exercícios: ${err.message}`);
+  }
+}
+
+async function showLibraryForm(mode, exerciseId) {
+  hideError('lib-exercise-form-error');
+  hideLibraryFeedback();
+  const form = document.getElementById('library-exercise-form');
+  if (!mode) {
+    form.style.display = 'none';
+    return;
+  }
+  libraryEditExerciseId = mode === 'edit' ? exerciseId : null;
+  document.getElementById('lib-exercise-name').value = '';
+  document.getElementById('lib-exercise-description').value = '';
+  document.getElementById('lib-exercise-type').value = 'repetitions';
+  document.getElementById('lib-exercise-sport-group').style.display = mode === 'create' ? 'block' : 'none';
+  document.getElementById('lib-exercise-sport').required = mode === 'create';
+  document.getElementById('library-form-title').textContent = mode === 'edit' ? 'Editar exercício' : 'Novo exercício';
+  document.getElementById('lib-exercise-form-btn').textContent = mode === 'edit' ? 'Salvar alterações' : 'Criar exercício';
+  if (mode === 'edit') {
+    try {
+      const ex = await apiGet(`/exercises/${exerciseId}`);
+      document.getElementById('lib-exercise-name').value = ex.name;
+      document.getElementById('lib-exercise-description').value = ex.description || '';
+      document.getElementById('lib-exercise-type').value = ex.exercise_type;
+    } catch (err) {
+      showLibraryFeedback(err.message);
+      return;
+    }
+  }
+  form.style.display = 'block';
+  form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+async function handleLibraryExerciseForm(e) {
+  e.preventDefault();
+  hideError('lib-exercise-form-error');
+  hideLibraryFeedback();
+  const btn = document.getElementById('lib-exercise-form-btn');
+  btn.disabled = true;
+  const name = document.getElementById('lib-exercise-name').value;
+  const description = document.getElementById('lib-exercise-description').value || null;
+  const exerciseType = document.getElementById('lib-exercise-type').value;
+  try {
+    if (libraryEditExerciseId) {
+      await apiPut(`/exercises/${libraryEditExerciseId}`, { name, description, exercise_type: exerciseType });
+    } else {
+      const sportId = parseInt(document.getElementById('lib-exercise-sport').value, 10);
+      await apiPost('/exercises', { name, description, sport_id: sportId, exercise_type: exerciseType });
+    }
+    showLibraryForm(null);
+    await loadExerciseLibrary();
+  } catch (err) {
+    showError('lib-exercise-form-error', err.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function handleLibraryDeleteExercise(exerciseId) {
+  if (!confirm('Excluir este exercício da biblioteca?')) return;
+  hideLibraryFeedback();
+  try {
+    await apiDelete(`/exercises/${exerciseId}`);
+    if (libraryEditExerciseId === exerciseId) showLibraryForm(null);
+    await loadExerciseLibrary();
+  } catch (err) {
+    showLibraryFeedback(err.message);
   }
 }
 

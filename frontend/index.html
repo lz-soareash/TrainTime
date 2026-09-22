@@ -52,6 +52,26 @@
               </svg>
               Painel
             </button>
+            <button id="menu-edit-profile" onclick="showProfileEdit()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+              Editar perfil
+            </button>
+            <button id="menu-attributes" onclick="showAttributesEdit()" style="display:none">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+              </svg>
+              Meus atributos
+            </button>
+            <button id="menu-exercises" onclick="openExerciseLibrary()" style="display:none">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6.5 6.5h11v11h-11z"/>
+                <path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/>
+              </svg>
+              Exercícios
+            </button>
             <button onclick="handleLogout()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -691,6 +711,104 @@
         <h2 class="page-card-title">Adicionar Atleta</h2>
         <div id="compatible-athletes" class="list-stack"></div>
         <div id="no-compatible" class="empty-state" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- ============ EDIT PROFILE ============ -->
+    <div id="page-profile-edit" class="page page-app">
+      <a class="back-link" onclick="showPage('page-dashboard')">&#8592; Voltar</a>
+      <div class="card page-card">
+        <h2 class="page-card-title" id="profile-edit-title">Editar Perfil</h2>
+        <form onsubmit="handleProfileEdit(event)">
+          <div class="form-group">
+            <label class="form-label" for="profile-edit-name">Nome</label>
+            <input class="form-input" type="text" id="profile-edit-name" required minlength="2">
+          </div>
+          <div class="form-group" id="profile-edit-sport-group">
+            <label class="form-label" for="profile-edit-sport">Esporte</label>
+            <select class="form-input" id="profile-edit-sport" onchange="onProfileSportChange()"></select>
+          </div>
+          <div class="form-group" id="profile-edit-position-group">
+            <label class="form-label" for="profile-edit-position">Posição</label>
+            <select class="form-input" id="profile-edit-position"></select>
+          </div>
+          <div class="form-group" id="profile-edit-sports-group" style="display:none">
+            <label class="form-label">Esportes que treina</label>
+            <div id="profile-edit-coach-sports"></div>
+          </div>
+          <div id="profile-edit-success" class="form-success" style="display:none"></div>
+          <div id="profile-edit-error" class="form-error" style="display:none" role="alert"></div>
+          <button class="btn btn-primary" type="submit" id="profile-edit-btn">Salvar</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ============ ATHLETE ATTRIBUTES ============ -->
+    <div id="page-attributes-edit" class="page page-app">
+      <a class="back-link" onclick="showPage('page-dashboard')">&#8592; Voltar</a>
+      <div class="card page-card">
+        <h2 class="page-card-title">Meus Atributos</h2>
+        <div id="attributes-edit-loading"></div>
+        <div class="error-state" id="attributes-edit-error" style="display:none"></div>
+        <div id="attributes-form-wrap" style="display:none">
+          <form onsubmit="handleAttributesEdit(event)">
+            <div id="attributes-fields" class="attribute-fields"></div>
+            <div id="attributes-edit-success" class="form-success" style="display:none"></div>
+            <div id="attributes-edit-error-msg" class="form-error" style="display:none" role="alert"></div>
+            <button class="btn btn-primary" type="submit" id="attributes-save-btn">Salvar avaliação</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ EXERCISE LIBRARY (coach) ============ -->
+    <div id="page-exercise-library" class="page page-app">
+      <a class="back-link" onclick="showPage('page-dashboard')">&#8592; Voltar</a>
+      <div class="card page-card">
+        <div class="section-head">
+          <h2 class="page-card-title">Biblioteca de Exercícios</h2>
+          <button class="btn btn-secondary btn-sm" id="btn-library-create" onclick="showLibraryForm('create')">+ Novo exercício</button>
+        </div>
+        <div class="form-group" style="max-width:320px">
+          <label class="form-label" for="library-sport-filter">Filtrar por esporte</label>
+          <select class="form-input" id="library-sport-filter" onchange="loadExerciseLibrary()"></select>
+        </div>
+        <div id="library-feedback" class="form-error" style="display:none" role="alert"></div>
+        <div id="library-exercises-loading"></div>
+        <div id="library-exercises-list" class="list-stack" style="display:none"></div>
+        <div id="library-no-exercises" class="empty-state" style="display:none"></div>
+      </div>
+
+      <div class="card page-card" id="library-exercise-form" style="display:none">
+        <h3 class="card-subtitle" id="library-form-title">Novo exercício</h3>
+        <form onsubmit="handleLibraryExerciseForm(event)">
+          <div class="form-group">
+            <label class="form-label" for="lib-exercise-name">Nome</label>
+            <input class="form-input" type="text" id="lib-exercise-name" required minlength="1" placeholder="Ex: Agachamento">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="lib-exercise-description">Descrição</label>
+            <input class="form-input" type="text" id="lib-exercise-description" placeholder="Descrição do exercício">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="lib-exercise-type">Tipo</label>
+            <select class="form-input" id="lib-exercise-type" required>
+              <option value="repetitions">Repetições</option>
+              <option value="duration">Duração</option>
+              <option value="distance">Distância</option>
+              <option value="mixed">Misto</option>
+            </select>
+          </div>
+          <div class="form-group" id="lib-exercise-sport-group">
+            <label class="form-label" for="lib-exercise-sport">Esporte</label>
+            <select class="form-input" id="lib-exercise-sport" required></select>
+          </div>
+          <div id="lib-exercise-form-error" class="form-error" style="display:none" role="alert"></div>
+          <div class="btn-row">
+            <button class="btn btn-primary" type="submit" id="lib-exercise-form-btn">Criar exercício</button>
+            <button class="btn btn-ghost" type="button" onclick="showLibraryForm(null)">Cancelar</button>
+          </div>
+        </form>
       </div>
     </div>
 

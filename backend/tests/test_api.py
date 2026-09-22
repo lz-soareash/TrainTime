@@ -366,7 +366,7 @@ def test_athlete_invalid_attribute_value_too_high():
     resp = client.put("/api/athletes/me/attributes", headers=auth_header(token), json={
         "attributes": [{"attribute_id": 1, "value": 150}]
     })
-    assert resp.status_code == 400
+    assert resp.status_code == 422
 
 
 def test_athlete_invalid_attribute_value_negative():
@@ -376,7 +376,7 @@ def test_athlete_invalid_attribute_value_negative():
     resp = client.put("/api/athletes/me/attributes", headers=auth_header(token), json={
         "attributes": [{"attribute_id": 1, "value": -10}]
     })
-    assert resp.status_code == 400
+    assert resp.status_code == 422
 
 
 def test_athlete_wrong_sport_attribute():
@@ -399,3 +399,73 @@ def test_athlete_attributes_without_sport():
         "attributes": [{"attribute_id": 1, "value": 50}]
     })
     assert resp.status_code == 400
+
+
+# ========== ATHLETE PROFILE EDGE CASES (Fase 5 consolidacao) ==========
+
+def test_athlete_update_position_only():
+    register_athlete(email="posonly@test.com", sport_id=1, position_id=1)
+    login_resp = login(email="posonly@test.com")
+    token = login_resp.json()["access_token"]
+    resp = client.put("/api/athletes/me", headers=auth_header(token), json={"position_id": 2})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["sport"]["name"] == "Volei"
+    assert data["position"]["name"] == "Oposto"
+
+
+def test_athlete_clear_position():
+    register_athlete(email="clearpos@test.com", sport_id=1, position_id=1)
+    login_resp = login(email="clearpos@test.com")
+    token = login_resp.json()["access_token"]
+    resp = client.put("/api/athletes/me", headers=auth_header(token), json={"position_id": None})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["sport"]["name"] == "Volei"
+    assert data["position"] is None
+
+
+def test_athlete_sport_change_clears_old_attributes():
+    register_athlete(email="attrclear@test.com", sport_id=1, position_id=1)
+    login_resp = login(email="attrclear@test.com")
+    token = login_resp.json()["access_token"]
+
+    client.put("/api/athletes/me/attributes", headers=auth_header(token), json={
+        "attributes": [
+            {"attribute_id": 1, "value": 70},
+            {"attribute_id": 2, "value": 80},
+        ]
+    })
+
+    resp = client.put("/api/athletes/me", headers=auth_header(token), json={
+        "sport_id": 2, "position_id": 10,
+    })
+    assert resp.status_code == 200
+    assert resp.json()["sport"]["name"] == "Basquete"
+
+    attrs = client.get("/api/athletes/me/attributes", headers=auth_header(token))
+    assert attrs.status_code == 200
+    assert attrs.json() == []
+
+
+def test_athlete_attributes_reject_duplicate():
+    register_athlete(email="attrdup@test.com", sport_id=1, position_id=1)
+    login_resp = login(email="attrdup@test.com")
+    token = login_resp.json()["access_token"]
+    resp = client.put("/api/athletes/me/attributes", headers=auth_header(token), json={
+        "attributes": [
+            {"attribute_id": 1, "value": 70},
+            {"attribute_id": 1, "value": 80},
+        ]
+    })
+    assert resp.status_code == 400
+
+
+def test_athlete_attributes_reject_empty():
+    register_athlete(email="attrempty@test.com", sport_id=1, position_id=1)
+    login_resp = login(email="attrempty@test.com")
+    token = login_resp.json()["access_token"]
+    resp = client.put("/api/athletes/me/attributes", headers=auth_header(token), json={
+        "attributes": []
+    })
+    assert resp.status_code == 422

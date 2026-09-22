@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_
 
-from app.models.models import Exercise, Sport, WorkoutExercise
+from app.models.models import Exercise, Sport, WorkoutExercise, CoachSport
 
 
 def get_exercise_by_id(db: Session, exercise_id: int) -> Exercise | None:
@@ -15,6 +15,12 @@ def create_exercise(db: Session, coach_id: int, name: str, description: str | No
     sport = db.query(Sport).filter(Sport.id == sport_id).first()
     if not sport:
         raise ValueError("Esporte invalido")
+
+    owns_sport = db.query(CoachSport).filter(
+        and_(CoachSport.coach_id == coach_id, CoachSport.sport_id == sport_id)
+    ).first()
+    if not owns_sport:
+        raise ValueError("Esporte nao cadastrado para este treinador")
 
     exercise = Exercise(
         name=name,

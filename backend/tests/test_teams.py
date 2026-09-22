@@ -443,3 +443,74 @@ def test_team_endpoint_no_token():
 
     resp = client.post("/api/teams", json={"name": "X", "sport_id": 1})
     assert resp.status_code == 401
+
+
+# ========== COACH SPORT INVARIANT (Fase 5 consolidacao) ==========
+
+def test_coach_cannot_create_team_in_unregistered_sport():
+    register_coach(email="coach_own1@test.com", sport_ids=[1])
+    login_resp = login(email="coach_own1@test.com")
+    token = login_resp.json()["access_token"]
+    resp = client.post("/api/teams", headers=auth_header(token), json={
+        "name": "Time Basquete", "sport_id": 2,
+    })
+    assert resp.status_code == 400
+
+
+def test_athlete_sport_change_removes_from_old_teams():
+    register_coach(email="coach_own2@test.com")
+    register_athlete(email="ath_own2@test.com", sport_id=1, position_id=1)
+    create_resp, token = create_team_helper("coach_own2@test.com", "Time Volei", 1)
+    team_id = create_resp.json()["id"]
+
+    login_resp = login(email="ath_own2@test.com")
+    ath_token = login_resp.json()["access_token"]
+    resp = client.get("/api/athletes/me", headers=auth_header(ath_token))
+    athlete_id = resp.json()["id"]
+
+    client.post(f"/api/teams/{team_id}/athletes/{athlete_id}", headers=auth_header(token))
+    my_teams = client.get("/api/athletes/me/teams", headers=auth_header(ath_token))
+    assert len(my_teams.json()) == 1
+
+    resp = client.put("/api/athletes/me", headers=auth_header(ath_token), json={
+        "sport_id": 2, "position_id": 10,
+    })
+    assert resp.status_code == 200
+    assert resp.json()["sport"]["name"] == "Basquete"
+
+    my_teams = client.get("/api/athletes/me/teams", headers=auth_header(ath_token))
+    assert my_teams.json() == []
+
+    team = client.get(f"/api/teams/{team_id}", headers=auth_header(token))
+    ids = [a["id"] for a in team.json()["athletes"]]
+    assert athlete_id not in ids
+
+
+def test_delete_team_removes_workouts():
+    register_coach(email="coach_del_wk@test.com")
+    create_resp, token = create_team_helper("coach_del_wk@test.com", "Com Treinos", 1)
+    team_id = create_resp.json()["id"]
+
+    workout_resp = client.post("/api/workouts", headers=auth_header(token), json={
+        "team_id": team_id, "title": "Treino da equipe",
+        "scheduled_at": "2026-09-25T10:00:00",
+    })
+    workout_id = workout_resp.json()["id"]
+
+    exercise_resp = client.post("/api/exercises", headers=auth_header(token), json={
+        "name": "Agachamento", "sport_id": 1, "exercise_type": "repetitions",
+    })
+    exercise_id = exercise_resp.json()["id"]
+
+    client.post(f"/api/workouts/{workout_id}/exercises", headers=auth_header(token), json={
+        "exercise_id": exercise_id, "order": 1,
+    })
+
+    resp = client.delete(f"/api/teams/{team_id}", headers=auth_header(token))
+    assert resp.status_code == 204
+
+    gone = client.get(f"/api/workouts/{workout_id}", headers=auth_header(token))
+    assert gone.status_code == 404
+
+    listing = client.get("/api/workouts", headers=auth_header(token))
+    assert listing.json() == []

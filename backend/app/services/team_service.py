@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_
 
-from app.models.models import Team, TeamAthlete, Athlete, Sport, Coach
+from app.models.models import Team, TeamAthlete, Athlete, Sport, Coach, CoachSport, Workout, WorkoutExercise
 
 
 def get_team_by_id(db: Session, team_id: int) -> Team | None:
@@ -16,6 +16,12 @@ def create_team(db: Session, coach_id: int, name: str, sport_id: int) -> Team:
     sport = db.query(Sport).filter(Sport.id == sport_id).first()
     if not sport:
         raise ValueError("Esporte invalido")
+
+    owns_sport = db.query(CoachSport).filter(
+        and_(CoachSport.coach_id == coach_id, CoachSport.sport_id == sport_id)
+    ).first()
+    if not owns_sport:
+        raise ValueError("Esporte nao cadastrado para este treinador")
 
     team = Team(name=name, sport_id=sport_id, coach_id=coach_id)
     db.add(team)
@@ -60,7 +66,18 @@ def delete_team(db: Session, team_id: int, coach_id: int) -> None:
     if team.coach_id != coach_id:
         raise PermissionError("Acesso negado")
 
-    db.query(TeamAthlete).filter(TeamAthlete.team_id == team_id).delete()
+    workout_ids = [
+        w.id for w in db.query(Workout).filter(Workout.team_id == team_id).all()
+    ]
+    if workout_ids:
+        db.query(WorkoutExercise).filter(
+            WorkoutExercise.workout_id.in_(workout_ids)
+        ).delete(synchronize_session=False)
+        db.query(Workout).filter(
+            Workout.id.in_(workout_ids)
+        ).delete(synchronize_session=False)
+
+    db.query(TeamAthlete).filter(TeamAthlete.team_id == team_id).delete(synchronize_session=False)
     db.delete(team)
     db.commit()
 

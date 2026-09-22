@@ -63,6 +63,16 @@ Coach → Team → Workout
 - Filtros: team_id, status
 - Ordenacao: scheduled_at ASC
 
+## Perfis e Atributos
+
+- Atleta: `sport`, `position`, `attributes` (0-100)
+- Trocar/limpar esporte do atleta limpa posicao e atributos e remove de times de esporte incompativel
+- Posicao validada contra o esporte do atleta; `position_id` pode ser `null`
+- Atualizacao de atributos tipada (Pydantic), duplicatas rejeitadas, lista vazia inadmitida
+- Treinador: `sports` (esportes que treina); criar time/exercicio exige o esporte no perfil do treinador
+- Exclusao de time remove treinos (Workout/WorkoutExercise) vinculados em cascata
+- WorkoutExercise atualizado/excluido sempre validando o `workout_id` da URL
+
 ## Exercicios
 
 ```

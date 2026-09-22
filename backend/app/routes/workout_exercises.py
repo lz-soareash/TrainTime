@@ -87,7 +87,7 @@ def update_exercise(
         raise HTTPException(status_code=404, detail="Perfil de treinador nao encontrado")
     try:
         we = workout_exercise_service.update_workout_exercise(
-            db, workout_exercise_id, coach.id,
+            db, workout_id, workout_exercise_id, coach.id,
             order=data.order, sets=data.sets, repetitions=data.repetitions,
             duration_seconds=data.duration_seconds,
             distance_meters=data.distance_meters,
@@ -111,7 +111,7 @@ def delete_exercise(
     if not coach:
         raise HTTPException(status_code=404, detail="Perfil de treinador nao encontrado")
     try:
-        workout_exercise_service.delete_workout_exercise(db, workout_exercise_id, coach.id)
+        workout_exercise_service.delete_workout_exercise(db, workout_id, workout_exercise_id, coach.id)
     except LookupError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except PermissionError as e:

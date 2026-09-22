@@ -3,10 +3,14 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.database.connection import get_db
 from app.core.deps import require_role
-from app.models.models import User, Athlete, Sport, Position, SportAttribute, AthleteAttribute
+from app.models.models import (
+    User, Athlete, Sport, Position, SportAttribute, AthleteAttribute,
+    Team, TeamAthlete,
+)
 from app.schemas.profile import (
     AthleteProfileUpdate, AthleteProfileResponse,
     SportResponse, PositionResponse, AthleteAttributeValue,
+    AthleteAttributesUpdate,
 )
 from app.services import team_service
 
@@ -57,11 +61,20 @@ def update_athlete_profile(
     if data.name is not None:
         current_user.name = data.name
 
-    sport_changed = "sport_id" in data.model_fields_set
-    position_changed = "position_id" in data.model_fields_set
+    sport_in_payload = "sport_id" in data.model_fields_set
 
-    if sport_changed:
-        if data.sport_id is not None:
+    if sport_in_payload:
+        if data.sport_id is None:
+            if athlete.sport_id is not None:
+                athlete.sport_id = None
+                athlete.position_id = None
+                db.query(TeamAthlete).filter(
+                    TeamAthlete.athlete_id == athlete.id
+                ).delete(synchronize_session=False)
+                db.query(AthleteAttribute).filter(
+                    AthleteAttribute.athlete_id == athlete.id
+                ).delete(synchronize_session=False)
+        elif data.sport_id != athlete.sport_id:
             sport = db.query(Sport).filter(Sport.id == data.sport_id).first()
             if not sport:
                 raise HTTPException(
@@ -69,26 +82,39 @@ def update_athlete_profile(
                     detail="Esporte invalido",
                 )
             athlete.sport_id = data.sport_id
-        else:
-            athlete.sport_id = None
             athlete.position_id = None
+            db.query(TeamAthlete).filter(
+                TeamAthlete.athlete_id == athlete.id,
+                TeamAthlete.team_id.in_(
+                    db.query(Team.id).filter(Team.sport_id != data.sport_id)
+                ),
+            ).delete(synchronize_session=False)
+            db.query(AthleteAttribute).filter(
+                AthleteAttribute.athlete_id == athlete.id,
+                AthleteAttribute.attribute_id.in_(
+                    db.query(SportAttribute.id).filter(SportAttribute.sport_id != data.sport_id)
+                ),
+            ).delete(synchronize_session=False)
 
-    if position_changed and data.sport_id is not None:
-        if athlete.sport_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Selecione um esporte antes de definir a posicao",
-            )
-        position = db.query(Position).filter(
-            Position.id == data.position_id,
-            Position.sport_id == athlete.sport_id,
-        ).first()
-        if not position:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Posicao invalida para o esporte selecionado",
-            )
-        athlete.position_id = data.position_id
+    if "position_id" in data.model_fields_set:
+        if data.position_id is None:
+            athlete.position_id = None
+        else:
+            if athlete.sport_id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Selecione um esporte antes de definir a posicao",
+                )
+            position = db.query(Position).filter(
+                Position.id == data.position_id,
+                Position.sport_id == athlete.sport_id,
+            ).first()
+            if not position:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Posicao invalida para o esporte selecionado",
+                )
+            athlete.position_id = data.position_id
 
     db.commit()
     db.refresh(current_user)
@@ -140,7 +166,7 @@ def get_athlete_attributes(
 
 @router.put("/me/attributes", response_model=list[AthleteAttributeValue])
 def update_athlete_attributes(
-    data: dict,
+    data: AthleteAttributesUpdate,
     current_user: User = Depends(require_role("athlete")),
     db: Session = Depends(get_db),
 ):
@@ -161,30 +187,29 @@ def update_athlete_attributes(
     ).all()
     valid_attr_ids = {a.id for a in sport_attrs}
 
-    attributes = data.get("attributes", [])
-    for item in attributes:
-        attr_id = item.get("attribute_id")
-        value = item.get("value")
-        if attr_id not in valid_attr_ids:
+    seen = set()
+    for item in data.attributes:
+        if item.attribute_id in seen:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Atributo ID {attr_id} nao pertence ao esporte selecionado",
+                detail=f"Atributo ID {item.attribute_id} enviado mais de uma vez",
             )
-        if not isinstance(value, (int, float)) or value < 0 or value > 100:
+        seen.add(item.attribute_id)
+        if item.attribute_id not in valid_attr_ids:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Valor do atributo {attr_id} deve ser entre 0 e 100",
+                detail=f"Atributo ID {item.attribute_id} nao pertence ao esporte selecionado",
             )
 
     db.query(AthleteAttribute).filter(
         AthleteAttribute.athlete_id == athlete.id
     ).delete()
 
-    for item in attributes:
+    for item in data.attributes:
         attr = AthleteAttribute(
             athlete_id=athlete.id,
-            attribute_id=item["attribute_id"],
-            value=item["value"],
+            attribute_id=item.attribute_id,
+            value=item.value,
         )
         db.add(attr)
 

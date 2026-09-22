@@ -62,5 +62,10 @@ class AthleteAttributeValue(BaseModel):
     value: float
 
 
+class AthleteAttributeValueInput(BaseModel):
+    attribute_id: int
+    value: float = Field(..., ge=0, le=100)
+
+
 class AthleteAttributesUpdate(BaseModel):
-    attributes: list[dict] = Field(..., min_length=1)
+    attributes: list[AthleteAttributeValueInput] = Field(..., min_length=1)

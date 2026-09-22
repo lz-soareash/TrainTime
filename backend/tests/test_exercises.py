@@ -315,3 +315,13 @@ def test_exercise_endpoint_no_token():
         "name": "X", "sport_id": 1, "exercise_type": "repetitions",
     })
     assert resp.status_code == 401
+
+
+# ========== COACH SPORT INVARIANT (Fase 5 consolidacao) ==========
+
+def test_coach_cannot_create_exercise_in_unregistered_sport():
+    register_coach(email="coach_ex_own@test.com", sport_ids=[1])
+    login_resp = login(email="coach_ex_own@test.com")
+    token = login_resp.json()["access_token"]
+    resp = create_exercise_helper(token, "Basquete Drill", sport_id=2)
+    assert resp.status_code == 400

@@ -1917,6 +1917,79 @@ input[type="time"].form-input {
   }
 }
 
+/* Form success feedback */
+.form-success {
+  background: rgba(16, 185, 129, 0.12);
+  color: #3ecf8e;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  margin-bottom: var(--space-4);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+/* Sidebar actions (editar perfil / atributos / exercicios) */
+.sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+/* Attribute sliders (0-100) */
+.attribute-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.attribute-field {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.attribute-field-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.attribute-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.attribute-value {
+  font-weight: 800;
+  color: var(--accent-blue-2);
+  font-size: 1rem;
+  text-align: right;
+  min-width: 3ch;
+}
+
+.attribute-range {
+  width: 100%;
+  accent-color: var(--accent-blue);
+  cursor: pointer;
+}
+
+/* Library rows keep the select-item layout but without pointer on hover */
+.library-row {
+  cursor: default;
+}
+
+.library-row:hover {
+  transform: none;
+  box-shadow: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
