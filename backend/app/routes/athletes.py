@@ -8,6 +8,7 @@ from app.schemas.profile import (
     AthleteProfileUpdate, AthleteProfileResponse,
     SportResponse, PositionResponse, AthleteAttributeValue,
 )
+from app.services import team_service
 
 router = APIRouter(prefix="/athletes", tags=["athletes"])
 
@@ -201,4 +202,37 @@ def update_athlete_attributes(
             "value": a.value,
         }
         for a in attrs
+    ]
+
+
+@router.get("/me/teams")
+def get_athlete_teams(
+    current_user: User = Depends(require_role("athlete")),
+    db: Session = Depends(get_db),
+):
+    athlete = db.query(Athlete).filter(Athlete.user_id == current_user.id).first()
+    if not athlete:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Perfil de atleta nao encontrado",
+        )
+    return team_service.list_athlete_teams(db, athlete.id)
+
+
+@router.get("/compatible")
+def get_compatible_athletes(
+    sport_id: int,
+    current_user: User = Depends(require_role("coach")),
+    db: Session = Depends(get_db),
+):
+    athletes = team_service.get_compatible_athletes(db, sport_id, 0)
+    return [
+        {
+            "id": a.id,
+            "name": a.user.name if a.user else "Unknown",
+            "sport_id": a.sport_id,
+            "position_id": a.position_id,
+            "position_name": a.position.name if a.position else None,
+        }
+        for a in athletes
     ]

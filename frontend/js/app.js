@@ -1,5 +1,7 @@
 const API_BASE = '/api';
 let currentSports = [];
+let currentTeamId = null;
+let currentUserRole = null;
 
 function getToken() {
   return localStorage.getItem('traintime_token');
@@ -41,6 +43,16 @@ async function apiPut(path, body) {
   if (res.status === 401) { clearToken(); showPage('page-home'); throw new Error('Sessao expirada'); }
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || `API error: ${res.status}`); }
   return res.json();
+}
+
+async function apiDelete(path) {
+  const headers = {};
+  const token = getToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(`${API_BASE}${path}`, { method: 'DELETE', headers });
+  if (res.status === 401) { clearToken(); showPage('page-home'); throw new Error('Sessao expirada'); }
+  if (!res.ok && res.status !== 204) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || `API error: ${res.status}`); }
+  return res.status === 204 ? null : res.json();
 }
 
 function showPage(pageId) {
@@ -208,6 +220,7 @@ function handleLogout() {
 async function loadDashboard() {
   try {
     const user = await apiGet('/auth/me');
+    currentUserRole = user.role;
     document.getElementById('dashboard-greeting').textContent = `Ola, ${user.name}`;
 
     if (user.role === 'athlete') {
@@ -236,6 +249,7 @@ async function loadDashboard() {
       } catch (e) {
         document.getElementById('dash-attributes').innerHTML = '<span class="tag" style="opacity:0.5">Nenhum atributo</span>';
       }
+      await loadAthleteTeams();
     } else if (user.role === 'coach') {
       document.getElementById('dashboard-role').textContent = 'Perfil: Treinador';
       document.getElementById('dashboard-athlete').style.display = 'none';
@@ -254,12 +268,214 @@ async function loadDashboard() {
       } catch (e) {
         document.getElementById('dash-coach-sports').innerHTML = '<span class="tag" style="opacity:0.5">Nenhum esporte</span>';
       }
+      await loadCoachTeams();
     }
 
     showPage('page-dashboard');
   } catch (err) {
     clearToken();
     showPage('page-home');
+  }
+}
+
+async function loadCoachTeams() {
+  try {
+    const teams = await apiGet('/teams');
+    const container = document.getElementById('dash-coach-teams');
+    const noTeams = document.getElementById('dash-no-teams');
+    container.innerHTML = '';
+    if (teams.length === 0) {
+      container.style.display = 'none';
+      noTeams.style.display = 'block';
+    } else {
+      container.style.display = 'flex';
+      noTeams.style.display = 'none';
+      teams.forEach(t => {
+        container.innerHTML += `
+          <div class="team-card" onclick="openTeam(${t.id})">
+            <div class="team-card-info">
+              <span class="team-card-name">${t.name}</span>
+              <span class="team-card-meta">${t.athlete_count} atleta${t.athlete_count !== 1 ? 's' : ''}</span>
+            </div>
+            <span class="team-card-icon">${t.sport.icon || ''}</span>
+          </div>
+        `;
+      });
+    }
+  } catch (e) {
+    console.error('Failed to load coach teams:', e);
+  }
+}
+
+async function loadAthleteTeams() {
+  try {
+    const teams = await apiGet('/athletes/me/teams');
+    const container = document.getElementById('dash-athlete-teams');
+    container.innerHTML = '';
+    if (teams.length === 0) {
+      container.innerHTML = '<p class="empty-text">Voce nao participa de nenhuma equipe ainda.</p>';
+    } else {
+      teams.forEach(t => {
+        container.innerHTML += `
+          <div class="team-card" onclick="openTeam(${t.id})">
+            <div class="team-card-info">
+              <span class="team-card-name">${t.name}</span>
+              <span class="team-card-meta">Treinador: ${t.coach_name}</span>
+            </div>
+            <span class="team-card-icon">${t.sport.icon || ''}</span>
+          </div>
+        `;
+      });
+    }
+  } catch (e) {
+    console.error('Failed to load athlete teams:', e);
+  }
+}
+
+function showCreateTeam() {
+  const select = document.getElementById('team-sport');
+  select.innerHTML = '<option value="">Selecione...</option>';
+  currentSports.forEach(s => {
+    select.innerHTML += `<option value="${s.id}">${s.icon || ''} ${s.name}</option>`;
+  });
+  document.getElementById('team-name').value = '';
+  hideError('create-team-error');
+  showPage('page-create-team');
+}
+
+async function handleCreateTeam(e) {
+  e.preventDefault();
+  hideError('create-team-error');
+  try {
+    const data = await apiPost('/teams', {
+      name: document.getElementById('team-name').value,
+      sport_id: parseInt(document.getElementById('team-sport').value),
+    });
+    await openTeam(data.id);
+  } catch (err) {
+    showError('create-team-error', err.message);
+  }
+}
+
+async function openTeam(teamId) {
+  currentTeamId = teamId;
+  try {
+    const team = await apiGet(`/teams/${teamId}`);
+    document.getElementById('team-detail-name').textContent = team.name;
+    document.getElementById('team-detail-sport').textContent = `${team.sport.icon || ''} ${team.sport.name}`;
+
+    const isCoach = currentUserRole === 'coach';
+    document.getElementById('team-detail-actions').style.display = isCoach ? 'flex' : 'none';
+    document.getElementById('btn-add-athlete').style.display = isCoach ? 'inline-flex' : 'none';
+
+    const athletesContainer = document.getElementById('team-athletes');
+    const noAthletes = document.getElementById('team-no-athletes');
+    athletesContainer.innerHTML = '';
+
+    if (team.athletes.length === 0) {
+      athletesContainer.style.display = 'none';
+      noAthletes.style.display = 'block';
+    } else {
+      athletesContainer.style.display = 'flex';
+      noAthletes.style.display = 'none';
+      team.athletes.forEach(a => {
+        const removeBtn = isCoach ? `<button class="btn-remove" onclick="handleRemoveAthlete(${a.id})">Remover</button>` : '';
+        athletesContainer.innerHTML += `
+          <div class="athlete-card">
+            <div class="athlete-card-info">
+              <span class="athlete-card-name">${a.name}</span>
+              <span class="athlete-card-pos">${a.position_name || '-'}</span>
+            </div>
+            ${removeBtn}
+          </div>
+        `;
+      });
+    }
+
+    showPage('page-team-detail');
+  } catch (err) {
+    console.error('Failed to open team:', err);
+  }
+}
+
+function showEditTeam() {
+  document.getElementById('edit-team-name').value = document.getElementById('team-detail-name').textContent;
+  hideError('edit-team-error');
+  showPage('page-edit-team');
+}
+
+async function handleEditTeam(e) {
+  e.preventDefault();
+  hideError('edit-team-error');
+  try {
+    await apiPut(`/teams/${currentTeamId}`, {
+      name: document.getElementById('edit-team-name').value,
+    });
+    await openTeam(currentTeamId);
+  } catch (err) {
+    showError('edit-team-error', err.message);
+  }
+}
+
+async function handleDeleteTeam() {
+  if (!confirm('Tem certeza que deseja excluir esta equipe?')) return;
+  try {
+    await apiDelete(`/teams/${currentTeamId}`);
+    await loadDashboard();
+  } catch (err) {
+    console.error('Failed to delete team:', err);
+  }
+}
+
+async function showAddAthlete() {
+  try {
+    const team = await apiGet(`/teams/${currentTeamId}`);
+    const compatible = await apiGet(`/athletes/compatible?sport_id=${team.sport.id}`);
+    const container = document.getElementById('compatible-athletes');
+    const noCompatible = document.getElementById('no-compatible');
+    container.innerHTML = '';
+
+    if (compatible.length === 0) {
+      container.style.display = 'none';
+      noCompatible.style.display = 'block';
+    } else {
+      container.style.display = 'flex';
+      noCompatible.style.display = 'none';
+      compatible.forEach(a => {
+        container.innerHTML += `
+          <div class="athlete-select-item">
+            <div class="athlete-card-info">
+              <span class="athlete-card-name">${a.name}</span>
+              <span class="athlete-card-pos">${a.position_name || '-'}</span>
+            </div>
+            <button class="btn-small btn-primary" onclick="handleAddAthlete(${a.id})">Adicionar</button>
+          </div>
+        `;
+      });
+    }
+
+    showPage('page-add-athlete');
+  } catch (err) {
+    console.error('Failed to load compatible athletes:', err);
+  }
+}
+
+async function handleAddAthlete(athleteId) {
+  try {
+    await apiPost(`/teams/${currentTeamId}/athletes/${athleteId}`);
+    await openTeam(currentTeamId);
+  } catch (err) {
+    console.error('Failed to add athlete:', err);
+  }
+}
+
+async function handleRemoveAthlete(athleteId) {
+  if (!confirm('Remover este atleta da equipe?')) return;
+  try {
+    await apiDelete(`/teams/${currentTeamId}/athletes/${athleteId}`);
+    await openTeam(currentTeamId);
+  } catch (err) {
+    console.error('Failed to remove athlete:', err);
   }
 }
 

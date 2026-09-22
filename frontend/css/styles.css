@@ -399,6 +399,153 @@ select.form-input {
   background: var(--success);
 }
 
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.section-header h3 {
+  margin-bottom: 0;
+}
+
+.btn-small {
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8rem;
+  min-height: auto;
+  border-radius: var(--radius-sm);
+}
+
+.team-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.team-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: var(--bg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.team-card:hover {
+  border-color: var(--primary);
+}
+
+.team-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.team-card-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.team-card-meta {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.team-card-icon {
+  font-size: 1.5rem;
+}
+
+.team-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.team-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.team-sport {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.team-header-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.athlete-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.athlete-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--bg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+}
+
+.athlete-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.athlete-card-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.athlete-card-pos {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.athlete-select-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.athlete-select-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--bg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+}
+
+.athlete-select-item .btn-remove {
+  color: var(--error);
+  font-size: 0.8rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+
+.empty-text {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
 .page {
   display: none;
   width: 100%;

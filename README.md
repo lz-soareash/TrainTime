@@ -11,8 +11,6 @@ Permitir que atletas acompanhem seus treinos pelo celular e que treinadores gere
 - Volei
 - Basquete
 
-Novos esportes poderao ser adicionados no futuro.
-
 ## Tecnologias
 
 | Camada | Tecnologia |
@@ -24,16 +22,12 @@ Novos esportes poderao ser adicionados no futuro.
 
 ## Como Executar
 
-### Backend
-
 ```bash
 cd backend
-python -m venv venv
-venv\Scripts\activate      # Windows
 pip install -r requirements.txt
 ```
 
-Crie o arquivo `backend/.env`:
+Crie `backend/.env`:
 
 ```
 SECRET_KEY=sua-chave-secreta
@@ -46,72 +40,43 @@ DATABASE_URL=sqlite:///./train_time.db
 uvicorn app.main:app --reload
 ```
 
-A API estara disponivel em: `http://localhost:8000`
-Documentacao automatica: `http://localhost:8000/docs`
+- API: `http://localhost:8000/docs`
+- Frontend: `http://localhost:8000`
 
-### Frontend
-
-O frontend e servido automaticamente pelo FastAPI na raiz: `http://localhost:8000`
-
-### Testes
+## Testes
 
 ```bash
 cd backend
 pytest tests/ -v
 ```
 
-## Estrutura
-
-```
-TrainTime/
-├── backend/
-│   ├── app/
-│   │   ├── main.py
-│   │   ├── core/
-│   │   │   ├── config.py
-│   │   │   ├── security.py
-│   │   │   └── deps.py
-│   │   ├── models/
-│   │   ├── schemas/
-│   │   ├── services/
-│   │   ├── routes/
-│   │   └── database/
-│   ├── tests/
-│   └── requirements.txt
-├── frontend/
-│   ├── index.html
-│   ├── css/
-│   └── js/
-├── docs/
-├── README.md
-└── .gitignore
-```
-
 ## Fase Atual
 
-**FASE 2** - Usuarios, autenticacao e perfis esportivos
+**FASE 3** - Sistema de Equipes
 
 ### Implementado
 
-- Estrutura do projeto
-- Backend com FastAPI
-- Banco de dados SQLite com SQLAlchemy
-- Modelos: User, Sport, Position, SportAttribute, Athlete, Coach, Team, TeamAthlete, CoachSport, AthleteAttribute
-- Autenticacao JWT com bcrypt
-- Cadastro de atleta (com esporte e posicao)
-- Cadastro de treinador (com esportes)
-- Login e logout
-- Perfil de atleta (GET/PUT)
-- Perfil de treinador (GET/PUT)
-- Atributos esportivos do atleta (0-100)
-- Controle de roles e autorizacao
-- Frontend responsivo mobile-first com login/cadastro/dashboard
-- 35 testes automatizados
-- Documentacao
+- Autenticacao JWT + bcrypt
+- Cadastro e login (atleta/treinador)
+- Perfil de atleta e treinador
+- Atributos esportivos (0-100)
+- **Sistema de equipes:**
+  - Criar equipe (treinador)
+  - Listar equipes (treinador)
+  - Visualizar equipe (treinador/atleta)
+  - Editar nome da equipe (treinador)
+  - Excluir equipe (treinador)
+  - Adicionar atleta a equipe (treinador)
+  - Remover atleta da equipe (treinador)
+  - Visualizar minhas equipes (atleta)
+  - Validacao de esporte compativel
+  - Controle de duplicidade
+  - Autorizacao por proprietario
+- 62 testes automatizados
+- Frontend mobile-first com gerenciamento de equipes
 
 ### PLANEJADO (Fases futuras)
 
-- Sistema de equipes
 - Treinos e exercicios
 - Acompanhamento de desempenho
 - Avaliacoes de treinadores

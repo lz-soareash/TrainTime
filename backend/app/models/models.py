@@ -108,6 +108,7 @@ class Team(Base):
     name = Column(String(255), nullable=False)
     sport_id = Column(Integer, ForeignKey("sports.id"), nullable=False)
     coach_id = Column(Integer, ForeignKey("coaches.id"), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     sport = relationship("Sport")
     coach = relationship("Coach", back_populates="teams")
