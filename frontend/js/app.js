@@ -61,8 +61,71 @@ async function apiDelete(path) {
 
 function showPage(pageId) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById(pageId).classList.add('active');
+  const target = document.getElementById(pageId);
+  target.classList.add('active');
+  const header = document.getElementById('app-header');
+  const isAuth = target.classList.contains('page--auth');
+  document.body.classList.toggle('app-shell', !isAuth);
+  header.hidden = isAuth;
 }
+
+function initials(name) {
+  if (!name) return 'U';
+  return name.trim().split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase();
+}
+
+function scrollToSection(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function emptyStateHTML(icon, title, text, btnHTML = '') {
+  return `
+    <span class="empty-icon" aria-hidden="true">${icon}</span>
+    <span class="empty-title">${title}</span>
+    <span class="empty-text">${text}</span>
+    ${btnHTML}
+  `;
+}
+
+function skeletonCards(count) {
+  let html = '';
+  for (let i = 0; i < count; i++) {
+    html += `
+      <div class="skeleton skeleton-card">
+        <div class="skeleton-img"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line skeleton-line--sm"></div>
+      </div>
+    `;
+  }
+  return html;
+}
+
+function renderAppHeader(user) {
+  document.getElementById('header-avatar').textContent = initials(user.name);
+  document.getElementById('header-name').textContent = (user.name || '').split(' ')[0] || 'Usuário';
+}
+
+function toggleUserMenu(event) {
+  event.stopPropagation();
+  const menu = document.getElementById('user-dropdown');
+  const btn = document.getElementById('btn-user-menu');
+  const open = menu.hidden;
+  menu.hidden = !open;
+  btn.setAttribute('aria-expanded', String(open));
+}
+
+function closeUserMenu(event) {
+  if (event && event.target instanceof Element && event.target.closest('.user-menu')) return;
+  const menu = document.getElementById('user-dropdown');
+  const btn = document.getElementById('btn-user-menu');
+  if (!menu.hidden) {
+    menu.hidden = true;
+    btn.setAttribute('aria-expanded', 'false');
+  }
+}
+document.addEventListener('click', closeUserMenu);
 
 function showError(elementId, message) {
   const el = document.getElementById(elementId);
@@ -225,55 +288,75 @@ async function loadDashboard() {
   try {
     const user = await apiGet('/auth/me');
     currentUserRole = user.role;
-    document.getElementById('dashboard-greeting').textContent = `Ola, ${user.name}`;
+    renderAppHeader(user);
 
-    if (user.role === 'athlete') {
-      document.getElementById('dashboard-role').textContent = 'Perfil: Atleta';
-      document.getElementById('dashboard-athlete').style.display = 'block';
-      document.getElementById('dashboard-coach').style.display = 'none';
-      try {
-        const profile = await apiGet('/athletes/me');
-        document.getElementById('dash-sport').textContent = profile.sport ? `${profile.sport.icon || ''} ${profile.sport.name}` : '-';
-        document.getElementById('dash-position').textContent = profile.position ? profile.position.name : '-';
-      } catch (e) {
-        document.getElementById('dash-sport').textContent = '-';
-        document.getElementById('dash-position').textContent = '-';
+    document.getElementById('sidebar-name').textContent = user.name;
+    document.getElementById('sidebar-avatar').textContent = initials(user.name);
+
+    const teamsGrid = document.getElementById('dash-teams-grid');
+    const teamsLoading = document.getElementById('dash-teams-loading');
+    const teamsEmpty = document.getElementById('dash-teams-empty');
+    const teamsError = document.getElementById('dash-teams-error');
+    teamsGrid.innerHTML = '';
+    teamsEmpty.innerHTML = '';
+    teamsError.innerHTML = '';
+    teamsEmpty.hidden = true;
+    teamsError.hidden = true;
+    teamsLoading.innerHTML = skeletonCards(3);
+
+    const isAthlete = user.role === 'athlete';
+    document.getElementById('hero-quote-text').textContent = isAthlete
+      ? 'O progresso começa com um bom treino.'
+      : 'Disciplina é o que transforma objetivo em resultado.';
+    document.getElementById('sidebar-quote').textContent = isAthlete
+      ? 'Cada treino é um passo mais perto do seu objetivo.'
+      : 'Grandes resultados vêm de grandes planejamentos.';
+    document.getElementById('sidebar-role').textContent = isAthlete ? 'Atleta' : 'Treinador';
+    document.getElementById('dashboard-role').textContent = isAthlete ? 'Perfil Atleta' : 'Perfil Treinador';
+    document.getElementById('teams-section-title').textContent = isAthlete ? 'Minhas Equipes' : 'Suas Equipes';
+    document.getElementById('dashboard-welcome').textContent = isAthlete
+      ? 'Vamos treinar? Seu esforço de hoje constrói seu resultado de amanhã.'
+      : 'Bem-vindo ao seu painel de controle. Gerencie equipes, treinos e acompanhe seus atletas.';
+
+    const first = (user.name || '').split(' ')[0] || '';
+    document.getElementById('dashboard-greeting').textContent = `Olá, ${first} 👋`;
+
+    try {
+      const [teams, workouts, sports, profile, attributes] = await Promise.all([
+        isAthlete ? apiGet('/athletes/me/teams') : apiGet('/teams'),
+        apiGet('/workouts'),
+        apiGet('/sports'),
+        isAthlete ? apiGet('/athletes/me') : apiGet('/coaches/me'),
+        isAthlete ? apiGet('/athletes/me/attributes') : Promise.resolve([]),
+      ]);
+      currentSports = sports;
+
+      const workoutCounts = {};
+      let scheduledCount = 0;
+      workouts.forEach(w => {
+        workoutCounts[w.team_id] = (workoutCounts[w.team_id] || 0) + 1;
+        if (w.status === 'scheduled') scheduledCount++;
+      });
+
+      teamsLoading.innerHTML = '';
+      if (teams.length === 0) {
+        renderTeamsEmpty(isAthlete);
+      } else {
+        renderTeamsGrid(isAthlete, teams, workoutCounts);
       }
-      try {
-        const attrs = await apiGet('/athletes/me/attributes');
-        const container = document.getElementById('dash-attributes');
-        container.innerHTML = '';
-        if (attrs.length === 0) {
-          container.innerHTML = '<span class="tag" style="opacity:0.5">Nenhum atributo avaliado</span>';
-        } else {
-          attrs.forEach(a => {
-            container.innerHTML += `<span class="tag">${a.attribute_name}: ${a.value}</span>`;
-          });
-        }
-      } catch (e) {
-        document.getElementById('dash-attributes').innerHTML = '<span class="tag" style="opacity:0.5">Nenhum atributo</span>';
-      }
-      await loadAthleteTeams();
-      await loadAthleteWorkouts();
-    } else if (user.role === 'coach') {
-      document.getElementById('dashboard-role').textContent = 'Perfil: Treinador';
-      document.getElementById('dashboard-athlete').style.display = 'none';
-      document.getElementById('dashboard-coach').style.display = 'block';
-      try {
-        const profile = await apiGet('/coaches/me');
-        const container = document.getElementById('dash-coach-sports');
-        container.innerHTML = '';
-        if (profile.sports.length === 0) {
-          container.innerHTML = '<span class="tag" style="opacity:0.5">Nenhum esporte selecionado</span>';
-        } else {
-          profile.sports.forEach(s => {
-            container.innerHTML += `<span class="tag">${s.icon || ''} ${s.name}</span>`;
-          });
-        }
-      } catch (e) {
-        document.getElementById('dash-coach-sports').innerHTML = '<span class="tag" style="opacity:0.5">Nenhum esporte</span>';
-      }
-      await loadCoachTeams();
+
+      renderSidebar(isAthlete, profile, attributes);
+      renderMainCards(isAthlete, teams.length, scheduledCount, workouts.length);
+      renderPhases();
+    } catch (err) {
+      teamsLoading.innerHTML = '';
+      teamsError.innerHTML = `
+        <span class="error-icon" aria-hidden="true">⚠️</span>
+        <strong>Não foi possível carregar seus dados.</strong>
+        <p>Tente novamente.</p>
+        <button class="btn btn-secondary btn-sm" onclick="loadDashboard()">Tentar novamente</button>
+      `;
+      teamsError.hidden = false;
     }
 
     showPage('page-dashboard');
@@ -283,58 +366,158 @@ async function loadDashboard() {
   }
 }
 
-async function loadCoachTeams() {
-  try {
-    const teams = await apiGet('/teams');
-    const container = document.getElementById('dash-coach-teams');
-    const noTeams = document.getElementById('dash-no-teams');
-    container.innerHTML = '';
-    if (teams.length === 0) {
-      container.style.display = 'none';
-      noTeams.style.display = 'block';
+function renderTeamsGrid(isAthlete, teams, workoutCounts) {
+  const grid = document.getElementById('dash-teams-grid');
+  grid.innerHTML = '';
+  teams.forEach((t, i) => {
+    const count = workoutCounts[t.id] || 0;
+    const countText = count > 0 ? `${count} treino${count !== 1 ? 's' : ''}` : 'sem treinos';
+    const athleteText = isAthlete
+      ? (t.coach_name ? `Coach: ${t.coach_name}` : t.sport.name)
+      : `${t.sport.name} · ${t.athlete_count || 0} atleta${(t.athlete_count || 0) === 1 ? '' : 's'}`;
+    grid.innerHTML += `
+      <div class="team-grid-card" onclick="openTeam(${t.id})" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')openTeam(${t.id})">
+        <div class="team-visual ${i % 2 ? 'team-visual--purple' : ''}">
+          <span class="team-visual-icon" aria-hidden="true">${t.sport.icon || '🏅'}</span>
+          <span class="team-visual-badge">${t.sport.name}</span>
+        </div>
+        <div class="team-grid-body">
+          <div class="team-grid-group">
+            <h3 class="team-grid-name">${t.name}</h3>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="color:var(--text-muted)">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </div>
+          <p class="team-grid-sport">${athleteText}</p>
+          <div class="team-grid-group">
+            <span class="team-grid-count">📅 ${countText}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+}
+
+function renderTeamsEmpty(isAthlete) {
+  const empty = document.getElementById('dash-teams-empty');
+  empty.hidden = false;
+  empty.innerHTML = isAthlete
+    ? emptyStateHTML('👥', 'Você ainda não participa de equipes', 'Quando um treinador adicionar você a uma equipe, ela aparecerá aqui.')
+    : emptyStateHTML('👥', 'Nenhuma equipe ainda', 'Crie sua primeira equipe para começar a organizar seus atletas.',
+        '<button class="btn btn-primary btn-sm" onclick="showCreateTeam()">+ Criar equipe</button>');
+}
+
+function renderSidebar(isAthlete, profile, attributes) {
+  const block = document.getElementById('sidebar-block');
+  block.innerHTML = '';
+  if (isAthlete) {
+    const sport = profile.sport ? `${profile.sport.icon || '🏐'} ${profile.sport.name}` : 'Não definido';
+    const position = profile.position ? profile.position.name : 'Não definido';
+    block.innerHTML += `
+      <div class="sidebar-item"><span class="sidebar-item-icon" aria-hidden="true">${profile.sport ? (profile.sport.icon || '🏐') : '🏐'}</span><span>${profile.sport ? profile.sport.name : 'Esporte'}</span><span class="sidebar-item-arrow">→</span></div>
+      <div class="sidebar-item"><span class="sidebar-item-icon" aria-hidden="true">🎯</span><span>${position}</span><span class="sidebar-item-arrow">→</span></div>
+    `;
+    const list = attributes.slice(0, 4);
+    list.forEach(a => {
+      block.innerHTML += `
+        <div class="sidebar-item">
+          <span>${a.attribute_name}</span>
+          <b style="color:var(--accent-blue-2)">${a.value}</b>
+        </div>
+      `;
+    });
+  } else {
+    const sports = profile.sports || [];
+    if (sports.length === 0) {
+      block.innerHTML = '<p class="empty-text">Nenhum esporte selecionado.</p>';
     } else {
-      container.style.display = 'flex';
-      noTeams.style.display = 'none';
-      teams.forEach(t => {
-        container.innerHTML += `
-          <div class="team-card" onclick="openTeam(${t.id})">
-            <div class="team-card-info">
-              <span class="team-card-name">${t.name}</span>
-              <span class="team-card-meta">${t.athlete_count} atleta${t.athlete_count !== 1 ? 's' : ''}</span>
-            </div>
-            <span class="team-card-icon">${t.sport.icon || ''}</span>
+      sports.forEach(s => {
+        block.innerHTML += `
+          <div class="sidebar-item">
+            <span class="sidebar-item-icon" aria-hidden="true">${s.icon || '🏅'}</span>
+            <span>${s.name}</span>
+            <span class="sidebar-item-arrow">→</span>
           </div>
         `;
       });
     }
-  } catch (e) {
-    console.error('Failed to load coach teams:', e);
   }
 }
 
-async function loadAthleteTeams() {
-  try {
-    const teams = await apiGet('/athletes/me/teams');
-    const container = document.getElementById('dash-athlete-teams');
-    container.innerHTML = '';
-    if (teams.length === 0) {
-      container.innerHTML = '<p class="empty-text">Voce nao participa de nenhuma equipe ainda.</p>';
-    } else {
-      teams.forEach(t => {
-        container.innerHTML += `
-          <div class="team-card" onclick="openTeam(${t.id})">
-            <div class="team-card-info">
-              <span class="team-card-name">${t.name}</span>
-              <span class="team-card-meta">Treinador: ${t.coach_name}</span>
-            </div>
-            <span class="team-card-icon">${t.sport.icon || ''}</span>
-          </div>
-        `;
-      });
-    }
-  } catch (e) {
-    console.error('Failed to load athlete teams:', e);
+function renderMainCards(isAthlete, teamCount, scheduledCount, totalWorkouts) {
+  const container = document.getElementById('main-cards');
+  const teamsBtn = `<button class="btn btn-secondary btn-sm" onclick="scrollToSection('dash-teams-section')">Ver equipes →</button>`;
+
+  if (isAthlete) {
+    container.innerHTML = `
+      <div class="main-card main-card--featured">
+        <span class="main-card-icon" aria-hidden="true">📅</span>
+        <span class="main-card-count">${totalWorkouts}</span>
+        <h3 class="main-card-title">Meus Treinos</h3>
+        <p class="main-card-desc">Seus treinos das equipes, em um só lugar.</p>
+        <button class="btn btn-primary btn-sm" onclick="openAthleteWorkoutsPage()">Ver treinos →</button>
+      </div>
+      <div class="main-card">
+        <span class="main-card-icon" aria-hidden="true">👥</span>
+        <span class="main-card-count">${teamCount}</span>
+        <h3 class="main-card-title">Minhas Equipes</h3>
+        <p class="main-card-desc">Visualize as equipes que você participa.</p>
+        ${teamsBtn}
+      </div>
+      <div class="main-card">
+        <span class="main-card-icon" aria-hidden="true">📈</span>
+        <h3 class="main-card-title">Meu Progresso</h3>
+        <p class="main-card-desc">Acompanhe sua evolução nos treinos e atributos.</p>
+        <span class="badge-coming">Em breve</span>
+      </div>
+    `;
+  } else {
+    container.innerHTML = `
+      <div class="main-card">
+        <span class="main-card-icon" aria-hidden="true">👥</span>
+        <span class="main-card-count">${teamCount}</span>
+        <h3 class="main-card-title">Minhas Equipes</h3>
+        <p class="main-card-desc">Visualize e gerencie suas equipes de treinamento.</p>
+        ${teamsBtn}
+      </div>
+      <div class="main-card main-card--featured">
+        <span class="main-card-icon" aria-hidden="true">📅</span>
+        <span class="main-card-count">${scheduledCount}</span>
+        <h3 class="main-card-title">Treinos</h3>
+        <p class="main-card-desc">Crie e gerencie seus treinos de forma simples e organizada.</p>
+        <button class="btn btn-primary btn-sm" onclick="scrollToSection('dash-teams-section')">Ver treinos →</button>
+      </div>
+      <div class="main-card">
+        <span class="main-card-icon" aria-hidden="true">📊</span>
+        <h3 class="main-card-title">Performance</h3>
+        <p class="main-card-desc">Acompanhe a evolução dos seus atletas.</p>
+        <span class="badge-coming">Em breve</span>
+      </div>
+    `;
   }
+}
+
+function renderPhases() {
+  const phases = [
+    { n: 1, label: 'Fundamentos', done: true },
+    { n: 2, label: 'Usuários & Auth', done: true },
+    { n: 3, label: 'Equipes', done: true },
+    { n: 4, label: 'Treinos', done: true },
+    { n: 5, label: 'Exercícios', done: true },
+    { n: 6, label: 'Execução dos Treinos', done: false, current: true },
+    { n: 7, label: 'Desempenho', done: false },
+  ];
+  document.getElementById('phase-steps').innerHTML = phases.map(p => `
+    <div class="phase-step ${p.done ? 'phase-step--done' : p.current ? 'phase-step--current' : 'phase-step--next'}">
+      <span class="phase-step-dot" aria-hidden="true">${p.done ? '✓' : p.n}</span>
+      <span>Fase ${p.n} — ${p.label}</span>
+    </div>
+  `).join('');
+}
+
+async function openAthleteWorkoutsPage() {
+  await loadAthleteWorkouts();
+  showPage('page-athlete-workouts');
 }
 
 function showCreateTeam() {
@@ -367,6 +550,7 @@ async function openTeam(teamId) {
   try {
     const team = await apiGet(`/teams/${teamId}`);
     document.getElementById('team-detail-name').textContent = team.name;
+    document.getElementById('team-detail-icon').textContent = team.sport.icon || '🏐';
     document.getElementById('team-detail-sport').textContent = `${team.sport.icon || ''} ${team.sport.name}`;
 
     const isCoach = currentUserRole === 'coach';
@@ -379,7 +563,8 @@ async function openTeam(teamId) {
 
     if (team.athletes.length === 0) {
       athletesContainer.style.display = 'none';
-      noAthletes.style.display = 'block';
+      noAthletes.style.display = 'flex';
+      noAthletes.innerHTML = emptyStateHTML('👤', 'Nenhum atleta na equipe', 'Adicione atletas compatíveis com o esporte para montar seu elenco.');
     } else {
       athletesContainer.style.display = 'flex';
       noAthletes.style.display = 'none';
@@ -472,7 +657,8 @@ async function showAddAthlete() {
 
     if (compatible.length === 0) {
       container.style.display = 'none';
-      noCompatible.style.display = 'block';
+      noCompatible.style.display = 'flex';
+      noCompatible.innerHTML = emptyStateHTML('👥', 'Nenhum atleta compatível', 'Cadastre um atleta para este esporte e ele aparecerá aqui.');
     } else {
       container.style.display = 'flex';
       noCompatible.style.display = 'none';
@@ -526,7 +712,10 @@ async function openTeamWorkouts() {
     container.innerHTML = '';
     if (workouts.length === 0) {
       container.style.display = 'none';
-      noWorkouts.style.display = 'block';
+      noWorkouts.style.display = 'flex';
+      noWorkouts.innerHTML = emptyStateHTML('📅', 'Nenhum treino ainda', currentUserRole === 'coach'
+        ? 'Crie o primeiro treino desta equipe para começar.'
+        : 'Quando um treinador criar treinos para esta equipe, eles aparecerão aqui.');
     } else {
       container.style.display = 'flex';
       noWorkouts.style.display = 'none';
@@ -658,7 +847,8 @@ async function loadAthleteWorkouts() {
     container.innerHTML = '';
     if (workouts.length === 0) {
       container.style.display = 'none';
-      noWorkouts.style.display = 'block';
+      noWorkouts.style.display = 'flex';
+      noWorkouts.innerHTML = emptyStateHTML('📅', 'Nenhum treino disponível', 'Quando um treinador publicar treinos para suas equipes, eles aparecerão aqui.');
     } else {
       container.style.display = 'flex';
       noWorkouts.style.display = 'none';
@@ -716,7 +906,8 @@ async function loadWorkoutExercisesForAthlete(workoutId) {
     container.innerHTML = '';
     if (wes.length === 0) {
       container.style.display = 'none';
-      noExercises.style.display = 'block';
+      noExercises.style.display = 'flex';
+      noExercises.innerHTML = emptyStateHTML('🏋️', 'Nenhum exercício neste treino', 'Os exercícios deste treino ainda não foram definidos pelo treinador.');
     } else {
       container.style.display = 'flex';
       noExercises.style.display = 'none';
@@ -729,23 +920,37 @@ async function loadWorkoutExercisesForAthlete(workoutId) {
   }
 }
 
+function exerciseTypeLabel(type) {
+  const map = { repetitions: 'Repetições', duration: 'Duração', distance: 'Distância', mixed: 'Misto' };
+  return map[type] || type || 'Exercício';
+}
+
+function formatDuration(seconds) {
+  if (seconds == null) return '';
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (m > 0) return s > 0 ? `${m}min ${s}s` : `${m}min`;
+  return `${s}s`;
+}
+
 function renderExerciseCard(we, isCoach) {
   const params = [];
-  if (we.sets) params.push(`${we.sets} series`);
+  if (we.sets) params.push(`${we.sets}× séries`);
   if (we.repetitions) params.push(`${we.repetitions} reps`);
-  if (we.duration_seconds) params.push(`${we.duration_seconds}s`);
+  const dur = formatDuration(we.duration_seconds);
+  if (dur) params.push(`⏱ ${dur}`);
   if (we.distance_meters) params.push(`${we.distance_meters}m`);
-  if (we.rest_seconds) params.push(`${we.rest_seconds}s descanso`);
+  if (we.rest_seconds) params.push(`Descanso ${we.rest_seconds}s`);
 
   const actionsHtml = isCoach ? `
     <div class="exercise-card-actions">
-      <button class="btn-icon" onclick="showEditWorkoutExercise(${we.id})" title="Editar">
+      <button class="btn-icon" onclick="showEditWorkoutExercise(${we.id})" title="Editar" aria-label="Editar exercício">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
         </svg>
       </button>
-      <button class="btn-icon" onclick="handleDeleteWorkoutExercise(${we.id})" title="Excluir">
+      <button class="btn-icon btn-icon--danger" onclick="handleDeleteWorkoutExercise(${we.id})" title="Excluir" aria-label="Excluir exercício">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="3 6 5 6 21 6"/>
           <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -756,17 +961,19 @@ function renderExerciseCard(we, isCoach) {
 
   return `
     <div class="exercise-card">
-      <div class="exercise-card-header">
-        <div>
-          <span class="exercise-card-order">${we.order}.</span>
-          <span class="exercise-card-name">${we.exercise.name}</span>
-          <span class="exercise-card-type">${we.exercise.exercise_type}</span>
+      <span class="exercise-number" aria-hidden="true">${String(we.order).padStart(2, '0')}</span>
+      <div class="exercise-card-main">
+        <div class="exercise-card-header">
+          <div>
+            <span class="exercise-card-name">${we.exercise.name}</span>
+            <span class="exercise-card-type">${exerciseTypeLabel(we.exercise.exercise_type)}</span>
+          </div>
+          ${actionsHtml}
         </div>
-        ${actionsHtml}
-      </div>
-      <div class="exercise-card-params">
-        ${params.map(p => `<span>${p}</span>`).join('')}
-        ${we.notes ? `<span>${we.notes}</span>` : ''}
+        <div class="exercise-card-params">
+          ${params.length ? params.map(p => `<span class="exercise-param">${p}</span>`).join('') : '<span class="exercise-param">Sem parâmetros</span>'}
+        </div>
+        ${we.notes ? `<span class="exercise-note">${we.notes}</span>` : ''}
       </div>
     </div>
   `;
@@ -783,7 +990,8 @@ async function loadWorkoutExercises(workoutId) {
     container.innerHTML = '';
     if (wes.length === 0) {
       container.style.display = 'none';
-      noExercises.style.display = 'block';
+      noExercises.style.display = 'flex';
+      noExercises.innerHTML = emptyStateHTML('🏋️', 'Nenhum exercício neste treino', 'Adicione exercícios compatíveis para montar a ficha deste treino.');
     } else {
       container.style.display = 'flex';
       noExercises.style.display = 'none';
@@ -806,7 +1014,8 @@ async function showAddWorkoutExercise() {
     container.innerHTML = '';
     if (exercises.length === 0) {
       container.style.display = 'none';
-      noExercises.style.display = 'block';
+      noExercises.style.display = 'flex';
+      noExercises.innerHTML = emptyStateHTML('🏋️', 'Nenhum exercício disponível', 'Cadastre exercícios para este esporte para adicioná-los ao treino.');
     } else {
       container.style.display = 'flex';
       noExercises.style.display = 'none';

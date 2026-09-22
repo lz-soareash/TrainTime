@@ -2,539 +2,646 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#0f1117">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0B0D13">
   <meta name="description" content="TrainTime - Plataforma esportiva para atletas e treinadores">
   <title>TrainTime</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
+  <div class="app-header" id="app-header" hidden>
+    <div class="header-inner">
+      <button class="brand" onclick="loadDashboard()" aria-label="TrainTime - Dashboard">
+        <span class="brand-mark" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor" stroke="none"/>
+          </svg>
+        </span>
+        <span class="brand-name">Train<span class="brand-accent">Time</span></span>
+      </button>
+
+      <p class="header-tagline">Treine hoje. Evolua amanhã.</p>
+
+      <div class="header-right">
+        <button class="icon-btn" id="btn-notif" title="Notificações" aria-label="Notificações">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <span class="notif-dot" aria-hidden="true"></span>
+        </button>
+        <div class="user-menu">
+          <button class="user-menu-btn" id="btn-user-menu" onclick="toggleUserMenu(event)" aria-haspopup="true" aria-expanded="false" aria-label="Menu do usuário">
+            <span class="avatar" id="header-avatar">U</span>
+            <span class="user-name" id="header-name">Usuário</span>
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="user-dropdown" id="user-dropdown" hidden>
+            <button onclick="loadDashboard()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="9" rx="1"/>
+                <rect x="14" y="3" width="7" height="5" rx="1"/>
+                <rect x="14" y="12" width="7" height="9" rx="1"/>
+                <rect x="3" y="16" width="7" height="5" rx="1"/>
+              </svg>
+              Painel
+            </button>
+            <button onclick="handleLogout()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              Sair
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="container">
 
-    <div id="page-home" class="page active">
-      <div class="logo">Train<span class="logo-accent">Time</span></div>
-      <p class="tagline">Treine. Acompanhe. Evolua.</p>
-      <div class="btn-group">
-        <button class="btn btn-primary" onclick="goToRegister('athlete')">Sou Atleta</button>
-        <button class="btn btn-secondary" onclick="goToRegister('coach')">Sou Treinador</button>
-      </div>
-      <p class="link-text" style="margin-top:1.5rem">
-        Ja tem conta? <a class="link" onclick="showPage('page-login')">Entrar</a>
-      </p>
-    </div>
-
-    <div id="page-login" class="page">
-      <a class="back-link" onclick="showPage('page-home')">&#8592; Voltar</a>
-      <div class="auth-card">
-        <h2 class="auth-title">Entrar</h2>
-        <form id="login-form" onsubmit="handleLogin(event)">
-          <div class="form-group">
-            <label class="form-label">Email</label>
-            <input class="form-input" type="email" id="login-email" required placeholder="seu@email.com">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Senha</label>
-            <input class="form-input" type="password" id="login-password" required placeholder="Sua senha" minlength="6">
-          </div>
-          <div id="login-error" class="form-error" style="display:none"></div>
-          <button class="btn btn-primary" type="submit" id="login-btn">Entrar</button>
-        </form>
-        <p class="link-text" style="margin-top:1rem">
-          Nao tem conta? <a class="link" onclick="showPage('page-home')">Criar conta</a>
-        </p>
-      </div>
-    </div>
-
-    <div id="page-register-athlete" class="page">
-      <a class="back-link" onclick="showPage('page-home')">&#8592; Voltar</a>
-      <div class="auth-card">
-        <h2 class="auth-title">Criar Conta - Atleta</h2>
-        <form id="register-athlete-form" onsubmit="handleRegisterAthlete(event)">
-          <div class="form-group">
-            <label class="form-label">Nome</label>
-            <input class="form-input" type="text" id="reg-athlete-name" required placeholder="Seu nome" minlength="2">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Email</label>
-            <input class="form-input" type="email" id="reg-athlete-email" required placeholder="seu@email.com">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Senha</label>
-            <input class="form-input" type="password" id="reg-athlete-password" required placeholder="Minimo 6 caracteres" minlength="6">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Esporte</label>
-            <select class="form-input" id="reg-athlete-sport" required onchange="loadPositionsForRegister(this.value)">
-              <option value="">Selecione...</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Posicao</label>
-            <select class="form-input" id="reg-athlete-position" required>
-              <option value="">Selecione o esporte primeiro</option>
-            </select>
-          </div>
-          <div id="register-athlete-error" class="form-error" style="display:none"></div>
-          <button class="btn btn-primary" type="submit" id="register-athlete-btn">Criar Conta</button>
-        </form>
-        <p class="link-text" style="margin-top:1rem">
-          Ja tem conta? <a class="link" onclick="showPage('page-login')">Entrar</a>
-        </p>
-      </div>
-    </div>
-
-    <div id="page-register-coach" class="page">
-      <a class="back-link" onclick="showPage('page-home')">&#8592; Voltar</a>
-      <div class="auth-card">
-        <h2 class="auth-title">Criar Conta - Treinador</h2>
-        <form id="register-coach-form" onsubmit="handleRegisterCoach(event)">
-          <div class="form-group">
-            <label class="form-label">Nome</label>
-            <input class="form-input" type="text" id="reg-coach-name" required placeholder="Seu nome" minlength="2">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Email</label>
-            <input class="form-input" type="email" id="reg-coach-email" required placeholder="seu@email.com">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Senha</label>
-            <input class="form-input" type="password" id="reg-coach-password" required placeholder="Minimo 6 caracteres" minlength="6">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Esportes</label>
-            <div id="reg-coach-sports" class="checkbox-group"></div>
-          </div>
-          <div id="register-coach-error" class="form-error" style="display:none"></div>
-          <button class="btn btn-primary" type="submit" id="register-coach-btn">Criar Conta</button>
-        </form>
-        <p class="link-text" style="margin-top:1rem">
-          Ja tem conta? <a class="link" onclick="showPage('page-login')">Entrar</a>
-        </p>
-      </div>
-    </div>
-
-    <div id="page-dashboard" class="page">
-      <div class="dashboard-header">
-        <div>
-          <p class="dashboard-greeting" id="dashboard-greeting">Ola!</p>
-          <p class="dashboard-role" id="dashboard-role"></p>
+    <!-- ============ HOME / LANDING ============ -->
+    <div id="page-home" class="page page--auth active">
+      <div class="auth-wrap">
+        <div class="brand brand--standalone">
+          <span class="brand-mark brand-mark--lg" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor" stroke="none"/>
+            </svg>
+          </span>
+          <span class="brand-name brand-name--lg">Train<span class="brand-accent">Time</span></span>
         </div>
-        <button class="btn-icon" onclick="handleLogout()" title="Sair">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-            <polyline points="16 17 21 12 16 7"/>
-            <line x1="21" y1="12" x2="9" y2="12"/>
-          </svg>
-        </button>
+        <h1 class="landing-title">Treine.<br><span class="text-gradient">Acompanhe.</span> Evolua.</h1>
+        <p class="landing-sub">A plataforma esportiva que conecta treinadores e atletas em um só lugar.</p>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="goToRegister('athlete')">Sou Atleta</button>
+          <button class="btn btn-secondary" onclick="goToRegister('coach')">Sou Treinador</button>
+        </div>
+        <p class="link-text">
+          Já tem conta? <a class="link" onclick="showPage('page-login')">Entrar</a>
+        </p>
       </div>
+    </div>
 
-      <div id="dashboard-athlete" style="display:none">
-        <div class="detail-card">
-          <h3>Meu Perfil</h3>
-          <div class="profile-info">
-            <div class="profile-row">
-              <span class="profile-label">Esporte</span>
-              <span class="profile-value" id="dash-sport">-</span>
+    <!-- ============ LOGIN ============ -->
+    <div id="page-login" class="page page--auth">
+      <div class="auth-wrap">
+        <a class="back-link" onclick="showPage('page-home')">&#8592; Voltar</a>
+        <div class="auth-card">
+          <div class="brand brand--card">
+            <span class="brand-mark" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor" stroke="none"/>
+              </svg>
+            </span>
+            <span class="brand-name">Train<span class="brand-accent">Time</span></span>
+          </div>
+          <h2 class="auth-title">Entrar</h2>
+          <form id="login-form" onsubmit="handleLogin(event)">
+            <div class="form-group">
+              <label class="form-label" for="login-email">Email</label>
+              <input class="form-input" type="email" id="login-email" required placeholder="seu@email.com">
             </div>
-            <div class="profile-row">
-              <span class="profile-label">Posicao</span>
-              <span class="profile-value" id="dash-position">-</span>
+            <div class="form-group">
+              <label class="form-label" for="login-password">Senha</label>
+              <input class="form-input" type="password" id="login-password" required placeholder="Sua senha" minlength="6">
             </div>
-          </div>
+            <div id="login-error" class="form-error" style="display:none" role="alert"></div>
+            <button class="btn btn-primary" type="submit" id="login-btn">Entrar</button>
+          </form>
+          <p class="link-text">
+            Não tem conta? <a class="link" onclick="showPage('page-home')">Criar conta</a>
+          </p>
         </div>
-        <div class="detail-card">
-          <h3>Atributos</h3>
-          <div id="dash-attributes" class="tag-list"></div>
-        </div>
-        <div class="detail-card">
-          <div class="section-header">
-            <h3>Minhas Equipes</h3>
-          </div>
-          <div id="dash-athlete-teams" class="team-list"></div>
-        </div>
-      </div>
-
-      <div id="dashboard-coach" style="display:none">
-        <div class="detail-card">
-          <h3>Esportes</h3>
-          <div id="dash-coach-sports" class="tag-list"></div>
-        </div>
-        <div class="detail-card">
-          <div class="section-header">
-            <h3>Minhas Equipes</h3>
-            <button class="btn-small btn-primary" onclick="showCreateTeam()">+ Criar</button>
-          </div>
-          <div id="dash-coach-teams" class="team-list"></div>
-          <div id="dash-no-teams" style="display:none">
-            <p class="empty-text">Voce ainda nao possui equipes.</p>
-            <button class="btn btn-secondary" style="margin-top:0.75rem" onclick="showCreateTeam()">Criar primeira equipe</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="status-badge">
-        <span class="status-dot"></span>
-        Fase 4 - Sistema de Treinos
       </div>
     </div>
 
-    <div id="page-team-workouts" class="page">
+    <!-- ============ REGISTER ATHLETE ============ -->
+    <div id="page-register-athlete" class="page page--auth">
+      <div class="auth-wrap">
+        <a class="back-link" onclick="showPage('page-home')">&#8592; Voltar</a>
+        <div class="auth-card">
+          <div class="brand brand--card">
+            <span class="brand-mark" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor" stroke="none"/>
+              </svg>
+            </span>
+            <span class="brand-name">Train<span class="brand-accent">Time</span></span>
+          </div>
+          <h2 class="auth-title">Criar Conta — Atleta</h2>
+          <form id="register-athlete-form" onsubmit="handleRegisterAthlete(event)">
+            <div class="form-group">
+              <label class="form-label" for="reg-athlete-name">Nome</label>
+              <input class="form-input" type="text" id="reg-athlete-name" required placeholder="Seu nome" minlength="2">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="reg-athlete-email">Email</label>
+              <input class="form-input" type="email" id="reg-athlete-email" required placeholder="seu@email.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="reg-athlete-password">Senha</label>
+              <input class="form-input" type="password" id="reg-athlete-password" required placeholder="Mínimo 6 caracteres" minlength="6">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="reg-athlete-sport">Esporte</label>
+              <select class="form-input" id="reg-athlete-sport" required onchange="loadPositionsForRegister(this.value)">
+                <option value="">Selecione...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="reg-athlete-position">Posição</label>
+              <select class="form-input" id="reg-athlete-position" required>
+                <option value="">Selecione o esporte primeiro</option>
+              </select>
+            </div>
+            <div id="register-athlete-error" class="form-error" style="display:none" role="alert"></div>
+            <button class="btn btn-primary" type="submit" id="register-athlete-btn">Criar Conta</button>
+          </form>
+          <p class="link-text">
+            Já tem conta? <a class="link" onclick="showPage('page-login')">Entrar</a>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ REGISTER COACH ============ -->
+    <div id="page-register-coach" class="page page--auth">
+      <div class="auth-wrap">
+        <a class="back-link" onclick="showPage('page-home')">&#8592; Voltar</a>
+        <div class="auth-card">
+          <div class="brand brand--card">
+            <span class="brand-mark" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor" stroke="none"/>
+              </svg>
+            </span>
+            <span class="brand-name">Train<span class="brand-accent">Time</span></span>
+          </div>
+          <h2 class="auth-title">Criar Conta — Treinador</h2>
+          <form id="register-coach-form" onsubmit="handleRegisterCoach(event)">
+            <div class="form-group">
+              <label class="form-label" for="reg-coach-name">Nome</label>
+              <input class="form-input" type="text" id="reg-coach-name" required placeholder="Seu nome" minlength="2">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="reg-coach-email">Email</label>
+              <input class="form-input" type="email" id="reg-coach-email" required placeholder="seu@email.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="reg-coach-password">Senha</label>
+              <input class="form-input" type="password" id="reg-coach-password" required placeholder="Mínimo 6 caracteres" minlength="6">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Esportes</label>
+              <div id="reg-coach-sports" class="checkbox-grid"></div>
+            </div>
+            <div id="register-coach-error" class="form-error" style="display:none" role="alert"></div>
+            <button class="btn btn-primary" type="submit" id="register-coach-btn">Criar Conta</button>
+          </form>
+          <p class="link-text">
+            Já tem conta? <a class="link" onclick="showPage('page-login')">Entrar</a>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ DASHBOARD ============ -->
+    <div id="page-dashboard" class="page page-app">
+      <div class="dash">
+        <section class="hero">
+          <div class="hero-text">
+            <p class="hero-eyebrow" id="dashboard-role">PERFIL</p>
+            <h1 class="hero-title" id="dashboard-greeting">Olá</h1>
+            <p class="hero-sub" id="dashboard-welcome">Bem-vindo ao seu painel de controle.</p>
+          </div>
+          <div class="hero-quote">
+            <span class="hero-quote-mark">“</span>
+            <p class="hero-quote-text" id="hero-quote-text">Disciplina é o que transforma objetivo em resultado.</p>
+            <span class="hero-quote-icon" aria-hidden="true">🎯</span>
+          </div>
+        </section>
+
+        <section class="main-cards" id="main-cards"></section>
+
+        <div class="dash-layout">
+          <div class="dash-content" id="dash-teams-section">
+            <div class="section-head">
+              <h2 class="section-title" id="teams-section-title">Suas Equipes</h2>
+              <button class="link-btn" id="teams-see-all" onclick="scrollToSection('dash-teams-section')">Ver todas →</button>
+            </div>
+            <div class="teams-grid" id="dash-teams-grid"></div>
+            <div class="skeleton-grid" id="dash-teams-loading"></div>
+            <div class="empty-state" id="dash-teams-empty" hidden></div>
+            <div class="error-state" id="dash-teams-error" hidden></div>
+          </div>
+
+          <aside class="dash-sidebar">
+            <div class="card sidebar-card">
+              <div class="profile-hed">
+                <span class="avatar-xlg" id="sidebar-avatar">U</span>
+                <div class="profile-hed-info">
+                  <h3 class="sidebar-name" id="sidebar-name">Usuário</h3>
+                  <span class="role-pill" id="sidebar-role">Perfil</span>
+                </div>
+              </div>
+              <div class="sidebar-block" id="sidebar-block"></div>
+              <blockquote class="sidebar-quote">
+                <span class="hero-quote-mark" aria-hidden="true">“</span>
+                <span id="sidebar-quote">Grandes resultados vêm de grandes planejamentos.</span>
+              </blockquote>
+            </div>
+
+            <div class="card sidebar-card">
+              <h3 class="sidebar-card-title">Desenvolvimento do TrainTime</h3>
+              <div class="phase-steps" id="phase-steps"></div>
+            </div>
+
+            <div class="card sidebar-card next-phase-card">
+              <span class="next-phase-icon" aria-hidden="true">🚀</span>
+              <h3 class="sidebar-card-title">Fase 6 — Execução dos Treinos</h3>
+              <p>Em breve você poderá acompanhar a execução dos treinos e registrar o desempenho dos atletas.</p>
+              <button class="btn btn-ghost btn-sm" onclick="scrollToSection('phase-steps')">Saiba mais →</button>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ TEAM WORKOUTS ============ -->
+    <div id="page-team-workouts" class="page page-app">
       <a class="back-link" onclick="showPage('page-team-detail')">&#8592; Voltar</a>
-      <div class="detail-card">
-        <div class="section-header">
-          <h3 id="workouts-team-name">Treinos</h3>
-          <button id="btn-create-workout" class="btn-small btn-primary" style="display:none" onclick="showCreateWorkout()">+ Novo</button>
+      <div class="card page-card">
+        <div class="section-head">
+          <h2 class="section-title" id="workouts-team-name">Treinos</h2>
+          <button id="btn-create-workout" class="btn btn-primary btn-sm" style="display:none" onclick="showCreateWorkout()">+ Novo treino</button>
         </div>
-        <div id="team-workouts-list" class="workout-list"></div>
-        <div id="team-no-workouts" style="display:none">
-          <p class="empty-text">Nenhum treino para esta equipe.</p>
-        </div>
+        <div id="team-workouts-list" class="list-stack"></div>
+        <div id="team-no-workouts" class="empty-state" style="display:none"></div>
       </div>
     </div>
 
-    <div id="page-create-workout" class="page">
+    <!-- ============ CREATE WORKOUT ============ -->
+    <div id="page-create-workout" class="page page-app">
       <a class="back-link" onclick="showPage('page-team-workouts')">&#8592; Voltar</a>
-      <div class="auth-card">
-        <h2 class="auth-title">Novo Treino</h2>
+      <div class="card page-card">
+        <h2 class="page-card-title">Novo Treino</h2>
         <form onsubmit="handleCreateWorkout(event)">
           <div class="form-group">
-            <label class="form-label">Titulo</label>
-            <input class="form-input" type="text" id="workout-title" required placeholder="Ex: Treino de recepcao" minlength="1">
+            <label class="form-label" for="workout-title">Título</label>
+            <input class="form-input" type="text" id="workout-title" required placeholder="Ex: Treino de recepção" minlength="1">
           </div>
           <div class="form-group">
-            <label class="form-label">Descricao</label>
+            <label class="form-label" for="workout-description">Descrição</label>
             <input class="form-input" type="text" id="workout-description" placeholder="Objetivo do treino">
           </div>
           <div class="form-row">
             <div class="form-group form-group-half">
-              <label class="form-label">Data</label>
+              <label class="form-label" for="workout-date">Data</label>
               <input class="form-input" type="date" id="workout-date" required>
             </div>
             <div class="form-group form-group-half">
-              <label class="form-label">Horario</label>
+              <label class="form-label" for="workout-time">Horário</label>
               <input class="form-input" type="time" id="workout-time" required>
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label">Duracao (minutos)</label>
+            <label class="form-label" for="workout-duration">Duração (minutos)</label>
             <input class="form-input" type="number" id="workout-duration" placeholder="Ex: 90" min="1">
           </div>
-          <div id="create-workout-error" class="form-error" style="display:none"></div>
+          <div id="create-workout-error" class="form-error" style="display:none" role="alert"></div>
           <button class="btn btn-primary" type="submit">Criar treino</button>
         </form>
       </div>
     </div>
 
-    <div id="page-workout-detail" class="page">
+    <!-- ============ WORKOUT DETAIL (COACH) ============ -->
+    <div id="page-workout-detail" class="page page-app">
       <a class="back-link" onclick="showPage('page-team-workouts')">&#8592; Voltar</a>
-      <div class="detail-card">
-        <div class="workout-header">
-          <div>
-            <h2 id="workout-detail-title"></h2>
-            <p class="workout-team" id="workout-detail-team"></p>
+      <div class="card page-card">
+        <div class="workout-hero">
+          <div class="workout-hero-top">
+            <span class="workout-status" id="workout-detail-status"></span>
+            <div id="workout-detail-actions" class="btn-row" style="display:none">
+              <button class="icon-btn" onclick="showEditWorkout()" title="Editar treino" aria-label="Editar treino">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+              <button class="icon-btn icon-btn--danger" onclick="handleDeleteWorkout()" title="Excluir treino" aria-label="Excluir treino">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+              </button>
+            </div>
           </div>
-          <div id="workout-detail-actions" style="display:none">
-            <button class="btn-icon" onclick="showEditWorkout()" title="Editar">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-            </button>
-            <button class="btn-icon" onclick="handleDeleteWorkout()" title="Excluir">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"/>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-      <div class="detail-card">
-        <div class="profile-info">
-          <div class="profile-row">
-            <span class="profile-label">Status</span>
-            <span class="profile-value workout-status" id="workout-detail-status"></span>
-          </div>
-          <div class="profile-row">
-            <span class="profile-label">Data</span>
-            <span class="profile-value" id="workout-detail-date"></span>
-          </div>
-          <div class="profile-row">
-            <span class="profile-label">Horario</span>
-            <span class="profile-value" id="workout-detail-time"></span>
-          </div>
-          <div class="profile-row">
-            <span class="profile-label">Duracao</span>
-            <span class="profile-value" id="workout-detail-duration"></span>
-          </div>
-          <div class="profile-row">
-            <span class="profile-label">Descricao</span>
-            <span class="profile-value" id="workout-detail-desc"></span>
+          <h2 class="workout-hero-title" id="workout-detail-title"></h2>
+          <p class="workout-hero-team" id="workout-detail-team"></p>
+          <div class="workout-meta">
+            <div class="meta-chip">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span><span class="meta-label">Data</span><b id="workout-detail-date"></b></span>
+            </div>
+            <div class="meta-chip">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span><span class="meta-label">Horário</span><b id="workout-detail-time"></b></span>
+            </div>
+            <div class="meta-chip">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="10" y1="2" x2="14" y2="2"/><line x1="12" y1="2" x2="12" y2="22"/><polyline points="9 7 6 9 6 12"/></svg>
+              <span><span class="meta-label">Duração</span><b id="workout-detail-duration"></b></span>
+            </div>
           </div>
         </div>
       </div>
-      <div class="detail-card">
-        <div class="section-header">
-          <h3>Exercicios</h3>
-          <button id="btn-add-workout-exercise" class="btn-small btn-primary" style="display:none" onclick="showAddWorkoutExercise()">+ Adicionar</button>
+
+      <div class="card page-card">
+        <h3 class="card-subtitle">Descrição</h3>
+        <p class="workout-desc" id="workout-detail-desc"></p>
+      </div>
+
+      <div class="card page-card">
+        <div class="section-head">
+          <h3 class="card-subtitle">Exercícios</h3>
+          <button id="btn-add-workout-exercise" class="btn btn-primary btn-sm" style="display:none" onclick="showAddWorkoutExercise()">+ Adicionar</button>
         </div>
-        <div id="workout-exercises-list" class="exercise-list"></div>
-        <div id="workout-no-exercises" style="display:none">
-          <p class="empty-text">Nenhum exercicio neste treino.</p>
-        </div>
+        <div id="workout-exercises-list" class="list-stack"></div>
+        <div id="workout-no-exercises" class="empty-state" style="display:none"></div>
       </div>
     </div>
 
-    <div id="page-edit-workout" class="page">
+    <!-- ============ EDIT WORKOUT ============ -->
+    <div id="page-edit-workout" class="page page-app">
       <a class="back-link" onclick="showPage('page-workout-detail')">&#8592; Voltar</a>
-      <div class="auth-card">
-        <h2 class="auth-title">Editar Treino</h2>
+      <div class="card page-card">
+        <h2 class="page-card-title">Editar Treino</h2>
         <form onsubmit="handleEditWorkout(event)">
           <div class="form-group">
-            <label class="form-label">Titulo</label>
+            <label class="form-label" for="edit-workout-title">Título</label>
             <input class="form-input" type="text" id="edit-workout-title" required minlength="1">
           </div>
           <div class="form-group">
-            <label class="form-label">Descricao</label>
+            <label class="form-label" for="edit-workout-description">Descrição</label>
             <input class="form-input" type="text" id="edit-workout-description">
           </div>
           <div class="form-row">
             <div class="form-group form-group-half">
-              <label class="form-label">Data</label>
+              <label class="form-label" for="edit-workout-date">Data</label>
               <input class="form-input" type="date" id="edit-workout-date" required>
             </div>
             <div class="form-group form-group-half">
-              <label class="form-label">Horario</label>
+              <label class="form-label" for="edit-workout-time">Horário</label>
               <input class="form-input" type="time" id="edit-workout-time" required>
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label">Duracao (minutos)</label>
+            <label class="form-label" for="edit-workout-duration">Duração (minutos)</label>
             <input class="form-input" type="number" id="edit-workout-duration" min="1">
           </div>
           <div class="form-group">
-            <label class="form-label">Status</label>
+            <label class="form-label" for="edit-workout-status">Status</label>
             <select class="form-input" id="edit-workout-status">
               <option value="scheduled">Agendado</option>
-              <option value="completed">Concluido</option>
+              <option value="completed">Concluído</option>
               <option value="cancelled">Cancelado</option>
             </select>
           </div>
-          <div id="edit-workout-error" class="form-error" style="display:none"></div>
+          <div id="edit-workout-error" class="form-error" style="display:none" role="alert"></div>
           <button class="btn btn-primary" type="submit">Salvar</button>
         </form>
       </div>
     </div>
 
-    <div id="page-athlete-workouts" class="page">
+    <!-- ============ ATHLETE WORKOUTS ============ -->
+    <div id="page-athlete-workouts" class="page page-app">
       <a class="back-link" onclick="showPage('page-dashboard')">&#8592; Voltar</a>
-      <div class="detail-card">
-        <div class="section-header">
-          <h3>Meus Treinos</h3>
+      <div class="card page-card">
+        <div class="section-head">
+          <h2 class="section-title">Meus Treinos</h2>
         </div>
-        <div id="athlete-workouts-list" class="workout-list"></div>
-        <div id="athlete-no-workouts" style="display:none">
-          <p class="empty-text">Voce ainda nao possui treinos.</p>
-        </div>
+        <div id="athlete-workouts-list" class="list-stack"></div>
+        <div id="athlete-no-workouts" class="empty-state" style="display:none"></div>
       </div>
     </div>
 
-    <div id="page-add-workout-exercise" class="page">
+    <!-- ============ ADD WORKOUT EXERCISE ============ -->
+    <div id="page-add-workout-exercise" class="page page-app">
       <a class="back-link" onclick="showPage('page-workout-detail')">&#8592; Voltar</a>
-      <div class="auth-card">
-        <h2 class="auth-title">Adicionar Exercicio</h2>
-        <div id="compatible-exercises" class="exercise-select-list"></div>
-        <div id="no-compatible-exercises" style="display:none">
-          <p class="empty-text">Nenhum exercicio compativel.</p>
-        </div>
-        <button class="btn btn-secondary" style="margin-top:1rem" onclick="showCreateExercise()">Criar novo exercicio</button>
+      <div class="card page-card">
+        <h2 class="page-card-title">Adicionar Exercício</h2>
+        <div id="compatible-exercises" class="list-stack"></div>
+        <div id="no-compatible-exercises" class="empty-state" style="display:none"></div>
+        <button class="btn btn-secondary" style="margin-top:1rem" onclick="showCreateExercise()">Criar novo exercício</button>
       </div>
     </div>
 
-    <div id="page-create-exercise" class="page">
+    <!-- ============ CREATE EXERCISE ============ -->
+    <div id="page-create-exercise" class="page page-app">
       <a class="back-link" onclick="showPage('page-add-workout-exercise')">&#8592; Voltar</a>
-      <div class="auth-card">
-        <h2 class="auth-title">Novo Exercicio</h2>
+      <div class="card page-card">
+        <h2 class="page-card-title">Novo Exercício</h2>
         <form onsubmit="handleCreateExercise(event)">
           <div class="form-group">
-            <label class="form-label">Nome</label>
+            <label class="form-label" for="exercise-name">Nome</label>
             <input class="form-input" type="text" id="exercise-name" required placeholder="Ex: Agachamento" minlength="1">
           </div>
           <div class="form-group">
-            <label class="form-label">Descricao</label>
-            <input class="form-input" type="text" id="exercise-description" placeholder="Descricao do exercicio">
+            <label class="form-label" for="exercise-description">Descrição</label>
+            <input class="form-input" type="text" id="exercise-description" placeholder="Descrição do exercício">
           </div>
           <div class="form-group">
-            <label class="form-label">Tipo</label>
+            <label class="form-label" for="exercise-type">Tipo</label>
             <select class="form-input" id="exercise-type" required>
-              <option value="repetitions">Repeticoes</option>
-              <option value="duration">Duracao</option>
-              <option value="distance">Distancia</option>
+              <option value="repetitions">Repetições</option>
+              <option value="duration">Duração</option>
+              <option value="distance">Distância</option>
               <option value="mixed">Misto</option>
             </select>
           </div>
-          <div id="create-exercise-error" class="form-error" style="display:none"></div>
-          <button class="btn btn-primary" type="submit">Criar exercicio</button>
+          <div id="create-exercise-error" class="form-error" style="display:none" role="alert"></div>
+          <button class="btn btn-primary" type="submit">Criar exercício</button>
         </form>
       </div>
     </div>
 
-    <div id="page-configure-exercise" class="page">
+    <!-- ============ CONFIGURE EXERCISE ============ -->
+    <div id="page-configure-exercise" class="page page-app">
       <a class="back-link" onclick="showPage('page-add-workout-exercise')">&#8592; Voltar</a>
-      <div class="auth-card">
-        <h2 class="auth-title" id="configure-exercise-title">Configurar Exercicio</h2>
+      <div class="card page-card">
+        <h2 class="page-card-title" id="configure-exercise-title">Configurar Exercício</h2>
         <form onsubmit="handleAddWorkoutExercise(event)">
-          <div class="form-group">
-            <label class="form-label">Ordem</label>
-            <input class="form-input" type="number" id="we-order" required min="1" value="1">
+          <div class="form-row">
+            <div class="form-group form-group-half">
+              <label class="form-label" for="we-order">Ordem</label>
+              <input class="form-input" type="number" id="we-order" required min="1" value="1">
+            </div>
+            <div class="form-group form-group-half">
+              <label class="form-label" for="we-sets">Séries</label>
+              <input class="form-input" type="number" id="we-sets" placeholder="Ex: 3" min="1">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-group-half">
+              <label class="form-label" for="we-repetitions">Repetições</label>
+              <input class="form-input" type="number" id="we-repetitions" placeholder="Ex: 12" min="1">
+            </div>
+            <div class="form-group form-group-half">
+              <label class="form-label" for="we-rest">Descanso (seg)</label>
+              <input class="form-input" type="number" id="we-rest" placeholder="Ex: 60" min="0">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-group-half">
+              <label class="form-label" for="we-duration">Duração (seg)</label>
+              <input class="form-input" type="number" id="we-duration" placeholder="Ex: 600" min="1">
+            </div>
+            <div class="form-group form-group-half">
+              <label class="form-label" for="we-distance">Distância (m)</label>
+              <input class="form-input" type="number" id="we-distance" placeholder="Ex: 100" min="1" step="0.1">
+            </div>
           </div>
           <div class="form-group">
-            <label class="form-label">Series</label>
-            <input class="form-input" type="number" id="we-sets" placeholder="Ex: 3" min="1">
+            <label class="form-label" for="we-notes">Observações</label>
+            <input class="form-input" type="text" id="we-notes" placeholder="Observações">
           </div>
-          <div class="form-group">
-            <label class="form-label">Repeticoes</label>
-            <input class="form-input" type="number" id="we-repetitions" placeholder="Ex: 12" min="1">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Duracao (segundos)</label>
-            <input class="form-input" type="number" id="we-duration" placeholder="Ex: 600" min="1">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Distancia (metros)</label>
-            <input class="form-input" type="number" id="we-distance" placeholder="Ex: 100" min="1" step="0.1">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Descanso (segundos)</label>
-            <input class="form-input" type="number" id="we-rest" placeholder="Ex: 60" min="0">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Observacoes</label>
-            <input class="form-input" type="text" id="we-notes" placeholder="Observacoes">
-          </div>
-          <div id="configure-exercise-error" class="form-error" style="display:none"></div>
+          <div id="configure-exercise-error" class="form-error" style="display:none" role="alert"></div>
           <button class="btn btn-primary" type="submit">Adicionar</button>
         </form>
       </div>
     </div>
 
-    <div id="page-edit-workout-exercise" class="page">
+    <!-- ============ EDIT WORKOUT EXERCISE ============ -->
+    <div id="page-edit-workout-exercise" class="page page-app">
       <a class="back-link" onclick="showPage('page-workout-detail')">&#8592; Voltar</a>
-      <div class="auth-card">
-        <h2 class="auth-title">Editar Exercicio do Treino</h2>
+      <div class="card page-card">
+        <h2 class="page-card-title">Editar Exercício do Treino</h2>
         <form onsubmit="handleEditWorkoutExercise(event)">
-          <div class="form-group">
-            <label class="form-label">Ordem</label>
-            <input class="form-input" type="number" id="edit-we-order" required min="1">
+          <div class="form-row">
+            <div class="form-group form-group-half">
+              <label class="form-label" for="edit-we-order">Ordem</label>
+              <input class="form-input" type="number" id="edit-we-order" required min="1">
+            </div>
+            <div class="form-group form-group-half">
+              <label class="form-label" for="edit-we-sets">Séries</label>
+              <input class="form-input" type="number" id="edit-we-sets" min="1">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-group-half">
+              <label class="form-label" for="edit-we-repetitions">Repetições</label>
+              <input class="form-input" type="number" id="edit-we-repetitions" min="1">
+            </div>
+            <div class="form-group form-group-half">
+              <label class="form-label" for="edit-we-rest">Descanso (seg)</label>
+              <input class="form-input" type="number" id="edit-we-rest" min="0">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group form-group-half">
+              <label class="form-label" for="edit-we-duration">Duração (seg)</label>
+              <input class="form-input" type="number" id="edit-we-duration" min="1">
+            </div>
+            <div class="form-group form-group-half">
+              <label class="form-label" for="edit-we-distance">Distância (m)</label>
+              <input class="form-input" type="number" id="edit-we-distance" min="1" step="0.1">
+            </div>
           </div>
           <div class="form-group">
-            <label class="form-label">Series</label>
-            <input class="form-input" type="number" id="edit-we-sets" min="1">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Repeticoes</label>
-            <input class="form-input" type="number" id="edit-we-repetitions" min="1">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Duracao (segundos)</label>
-            <input class="form-input" type="number" id="edit-we-duration" min="1">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Distancia (metros)</label>
-            <input class="form-input" type="number" id="edit-we-distance" min="1" step="0.1">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Descanso (segundos)</label>
-            <input class="form-input" type="number" id="edit-we-rest" min="0">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Observacoes</label>
+            <label class="form-label" for="edit-we-notes">Observações</label>
             <input class="form-input" type="text" id="edit-we-notes">
           </div>
-          <div id="edit-workout-exercise-error" class="form-error" style="display:none"></div>
+          <div id="edit-workout-exercise-error" class="form-error" style="display:none" role="alert"></div>
           <button class="btn btn-primary" type="submit">Salvar</button>
         </form>
       </div>
     </div>
 
-    <div id="page-athlete-workout-detail" class="page">
+    <!-- ============ ATHLETE WORKOUT DETAIL ============ -->
+    <div id="page-athlete-workout-detail" class="page page-app">
       <a class="back-link" onclick="showPage('page-athlete-workouts')">&#8592; Voltar</a>
-      <div class="detail-card">
-        <div class="workout-header">
-          <div>
-            <h2 id="ath-workout-detail-title"></h2>
-            <p class="workout-team" id="ath-workout-detail-team"></p>
+      <div class="card page-card">
+        <div class="workout-hero">
+          <div class="workout-hero-top">
+            <span class="workout-status" id="ath-workout-detail-status"></span>
+          </div>
+          <h2 class="workout-hero-title" id="ath-workout-detail-title"></h2>
+          <p class="workout-hero-team" id="ath-workout-detail-team"></p>
+          <div class="workout-meta">
+            <div class="meta-chip">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span><span class="meta-label">Data</span><b id="ath-workout-detail-date"></b></span>
+            </div>
+            <div class="meta-chip">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span><span class="meta-label">Horário</span><b id="ath-workout-detail-time"></b></span>
+            </div>
+            <div class="meta-chip">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="10" y1="2" x2="14" y2="2"/><line x1="12" y1="2" x2="12" y2="22"/><polyline points="9 7 6 9 6 12"/></svg>
+              <span><span class="meta-label">Duração</span><b id="ath-workout-detail-duration"></b></span>
+            </div>
           </div>
         </div>
       </div>
-      <div class="detail-card">
-        <div class="profile-info">
-          <div class="profile-row">
-            <span class="profile-label">Status</span>
-            <span class="profile-value workout-status" id="ath-workout-detail-status"></span>
-          </div>
-          <div class="profile-row">
-            <span class="profile-label">Data</span>
-            <span class="profile-value" id="ath-workout-detail-date"></span>
-          </div>
-          <div class="profile-row">
-            <span class="profile-label">Horario</span>
-            <span class="profile-value" id="ath-workout-detail-time"></span>
-          </div>
-          <div class="profile-row">
-            <span class="profile-label">Duracao</span>
-            <span class="profile-value" id="ath-workout-detail-duration"></span>
-          </div>
+
+      <div class="card page-card">
+        <div class="section-head">
+          <h3 class="card-subtitle">Exercícios</h3>
         </div>
-      </div>
-      <div class="detail-card">
-        <h3>Exercicios</h3>
-        <div id="ath-workout-exercises-list" class="exercise-list"></div>
-        <div id="ath-workout-no-exercises" style="display:none">
-          <p class="empty-text">Nenhum exercicio neste treino.</p>
-        </div>
+        <div id="ath-workout-exercises-list" class="list-stack"></div>
+        <div id="ath-workout-no-exercises" class="empty-state" style="display:none"></div>
       </div>
     </div>
 
-    <div id="page-create-team" class="page">
+    <!-- ============ CREATE TEAM ============ -->
+    <div id="page-create-team" class="page page-app">
       <a class="back-link" onclick="showPage('page-dashboard')">&#8592; Voltar</a>
-      <div class="auth-card">
-        <h2 class="auth-title">Criar Equipe</h2>
+      <div class="card page-card">
+        <h2 class="page-card-title">Criar Equipe</h2>
         <form onsubmit="handleCreateTeam(event)">
           <div class="form-group">
-            <label class="form-label">Nome da equipe</label>
-            <input class="form-input" type="text" id="team-name" required placeholder="Ex: Sub-18 Volei" minlength="2">
+            <label class="form-label" for="team-name">Nome da equipe</label>
+            <input class="form-input" type="text" id="team-name" required placeholder="Ex: Sub-18 Vôlei" minlength="2">
           </div>
           <div class="form-group">
-            <label class="form-label">Esporte</label>
+            <label class="form-label" for="team-sport">Esporte</label>
             <select class="form-input" id="team-sport" required>
               <option value="">Selecione...</option>
             </select>
           </div>
-          <div id="create-team-error" class="form-error" style="display:none"></div>
+          <div id="create-team-error" class="form-error" style="display:none" role="alert"></div>
           <button class="btn btn-primary" type="submit">Criar equipe</button>
         </form>
       </div>
     </div>
 
-    <div id="page-team-detail" class="page">
+    <!-- ============ TEAM DETAIL ============ -->
+    <div id="page-team-detail" class="page page-app">
       <a class="back-link" onclick="showPage('page-dashboard')">&#8592; Voltar</a>
-      <div class="detail-card">
-        <div class="team-header">
-          <div>
-            <h2 id="team-detail-name"></h2>
-            <p class="team-sport" id="team-detail-sport"></p>
+      <div class="card page-card">
+        <div class="team-hero">
+          <span class="team-hero-icon" id="team-detail-icon" aria-hidden="true">🏐</span>
+          <div class="team-hero-top">
+            <h2 class="team-hero-title" id="team-detail-name"></h2>
+            <p class="team-hero-sport" id="team-detail-sport"></p>
           </div>
-          <div id="team-detail-actions" style="display:none">
-            <button class="btn-icon" onclick="showEditTeam()" title="Editar">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <div id="team-detail-actions" class="btn-row" style="display:none">
+            <button class="icon-btn" onclick="showEditTeam()" title="Editar equipe" aria-label="Editar equipe">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
               </svg>
             </button>
-            <button class="btn-icon" onclick="handleDeleteTeam()" title="Excluir">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <button class="icon-btn icon-btn--danger" onclick="handleDeleteTeam()" title="Excluir equipe" aria-label="Excluir equipe">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="3 6 5 6 21 6"/>
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
               </svg>
@@ -542,48 +649,48 @@
           </div>
         </div>
       </div>
-      <div class="detail-card">
-        <div class="section-header">
-          <h3>Atletas</h3>
-          <button id="btn-add-athlete" class="btn-small btn-primary" style="display:none" onclick="showAddAthlete()">+ Adicionar</button>
+
+      <div class="card page-card">
+        <div class="section-head">
+          <h3 class="card-subtitle">Atletas</h3>
+          <button id="btn-add-athlete" class="btn btn-primary btn-sm" style="display:none" onclick="showAddAthlete()">+ Adicionar atleta</button>
         </div>
-        <div id="team-athletes" class="athlete-list"></div>
-        <div id="team-no-athletes" style="display:none">
-          <p class="empty-text">Nenhum atleta nesta equipe.</p>
-        </div>
+        <div id="team-athletes" class="list-stack"></div>
+        <div id="team-no-athletes" class="empty-state" style="display:none"></div>
       </div>
-      <div class="detail-card">
-        <div class="section-header">
-          <h3>Treinos</h3>
-          <button class="btn-small btn-secondary" onclick="openTeamWorkouts()">Ver treinos</button>
+
+      <div class="card page-card">
+        <div class="section-head">
+          <h3 class="card-subtitle">Treinos</h3>
+          <button class="btn btn-secondary btn-sm" onclick="openTeamWorkouts()">Ver treinos →</button>
         </div>
-        <div id="team-workouts-preview" class="workout-list"></div>
+        <div id="team-workouts-preview" class="list-stack"></div>
       </div>
     </div>
 
-    <div id="page-edit-team" class="page">
+    <!-- ============ EDIT TEAM ============ -->
+    <div id="page-edit-team" class="page page-app">
       <a class="back-link" onclick="showPage('page-team-detail')">&#8592; Voltar</a>
-      <div class="auth-card">
-        <h2 class="auth-title">Editar Equipe</h2>
+      <div class="card page-card">
+        <h2 class="page-card-title">Editar Equipe</h2>
         <form onsubmit="handleEditTeam(event)">
           <div class="form-group">
-            <label class="form-label">Nome da equipe</label>
+            <label class="form-label" for="edit-team-name">Nome da equipe</label>
             <input class="form-input" type="text" id="edit-team-name" required minlength="2">
           </div>
-          <div id="edit-team-error" class="form-error" style="display:none"></div>
+          <div id="edit-team-error" class="form-error" style="display:none" role="alert"></div>
           <button class="btn btn-primary" type="submit">Salvar</button>
         </form>
       </div>
     </div>
 
-    <div id="page-add-athlete" class="page">
+    <!-- ============ ADD ATHLETE ============ -->
+    <div id="page-add-athlete" class="page page-app">
       <a class="back-link" onclick="showPage('page-team-detail')">&#8592; Voltar</a>
-      <div class="auth-card">
-        <h2 class="auth-title">Adicionar Atleta</h2>
-        <div id="compatible-athletes" class="athlete-select-list"></div>
-        <div id="no-compatible" style="display:none">
-          <p class="empty-text">Nenhum atleta compativel disponivel.</p>
-        </div>
+      <div class="card page-card">
+        <h2 class="page-card-title">Adicionar Atleta</h2>
+        <div id="compatible-athletes" class="list-stack"></div>
+        <div id="no-compatible" class="empty-state" style="display:none"></div>
       </div>
     </div>
 
