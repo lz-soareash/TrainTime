@@ -22,6 +22,14 @@ Frontend (HTML/CSS/JS)
 - `routes/` - endpoints da API
 - `services/` - logica de negocio
 - `database/connection.py` - engine, sessao
+- `database/migrations.py` - migracoes leves e idempotentes de schema
+
+## Migracao de Schema
+
+- `create_all` cria tabelas novas, mas NAO altera tabelas existentes
+- `database/migrations.py::run_migrations` roda no startup (lifespan)
+- Adiciona colunas que faltam em bancos criados antes da coluna existir no model
+- Mapa `MISSING_COLUMN_FIXES` (ex.: `teams.created_at`); idempotente (checa `PRAGMA table_info`)
 
 ## Autenticacao
 

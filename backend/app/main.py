@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
 from app.database.connection import engine, Base, SessionLocal
+from app.database.migrations import run_migrations
 from app.routes import health, sports, auth, athletes, coaches, teams, workouts, exercises, workout_exercises
 from app.services.seed import seed_sports
 
@@ -12,6 +13,7 @@ from app.services.seed import seed_sports
 @asynccontextmanager
 async def lifespan(app):
     Base.metadata.create_all(bind=engine)
+    run_migrations(engine)
     db = SessionLocal()
     try:
         seed_sports(db)
