@@ -113,6 +113,7 @@ class Team(Base):
     sport = relationship("Sport")
     coach = relationship("Coach", back_populates="teams")
     athletes = relationship("Athlete", secondary="team_athletes", back_populates="teams")
+    workouts = relationship("Workout", back_populates="team")
 
 
 class TeamAthlete(Base):
@@ -122,3 +123,19 @@ class TeamAthlete(Base):
     team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)
     athlete_id = Column(Integer, ForeignKey("athletes.id"), nullable=False)
     joined_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class Workout(Base):
+    __tablename__ = "workouts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)
+    title = Column(String(255), nullable=False)
+    description = Column(String(500), nullable=True)
+    scheduled_at = Column(DateTime, nullable=False)
+    duration_minutes = Column(Integer, nullable=True)
+    status = Column(String(20), nullable=False, default="scheduled")
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    team = relationship("Team", back_populates="workouts")

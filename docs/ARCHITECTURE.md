@@ -42,6 +42,19 @@ Coach → Team → TeamAthlete → Athlete
 - Autorizacao: coach so acessa suas equipes
 - Atleta so visualiza equipes que participa
 
+## Treinos
+
+```
+Coach → Team → Workout
+```
+
+- Treinador cria/edita/exclui treinos nas proprias equipes
+- Atleta visualiza treinos das equipes que participa
+- Treino pertence a uma equipe (nao diretamente a atletas)
+- Autorizacao: coach proprietario ou atleta membro da equipe
+- Filtros: team_id, status
+- Ordenacao: scheduled_at ASC
+
 ## Principios
 
 - Separacao de responsabilidades

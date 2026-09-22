@@ -1,6 +1,7 @@
 const API_BASE = '/api';
 let currentSports = [];
 let currentTeamId = null;
+let currentWorkoutId = null;
 let currentUserRole = null;
 
 function getToken() {
@@ -250,6 +251,7 @@ async function loadDashboard() {
         document.getElementById('dash-attributes').innerHTML = '<span class="tag" style="opacity:0.5">Nenhum atributo</span>';
       }
       await loadAthleteTeams();
+      await loadAthleteWorkouts();
     } else if (user.role === 'coach') {
       document.getElementById('dashboard-role').textContent = 'Perfil: Treinador';
       document.getElementById('dashboard-athlete').style.display = 'none';
@@ -393,8 +395,38 @@ async function openTeam(teamId) {
     }
 
     showPage('page-team-detail');
+
+    loadTeamWorkoutsPreview(teamId);
   } catch (err) {
     console.error('Failed to open team:', err);
+  }
+}
+
+async function loadTeamWorkoutsPreview(teamId) {
+  try {
+    const workouts = await apiGet(`/workouts?team_id=${teamId}`);
+    const container = document.getElementById('team-workouts-preview');
+    container.innerHTML = '';
+    const recent = workouts.slice(0, 3);
+    if (recent.length === 0) {
+      container.innerHTML = '<p class="empty-text">Nenhum treino ainda.</p>';
+    } else {
+      recent.forEach(w => {
+        const date = new Date(w.scheduled_at);
+        const dateStr = date.toLocaleDateString('pt-BR');
+        container.innerHTML += `
+          <div class="workout-card" onclick="openWorkout(${w.id})">
+            <span class="workout-card-title">${w.title}</span>
+            <div class="workout-card-meta">
+              <span>${dateStr}</span>
+              <span class="workout-status workout-status-${w.status}">${w.status === 'scheduled' ? 'Agendado' : w.status === 'completed' ? 'Concluido' : 'Cancelado'}</span>
+            </div>
+          </div>
+        `;
+      });
+    }
+  } catch (e) {
+    console.error('Failed to load workouts preview:', e);
   }
 }
 
@@ -476,6 +508,175 @@ async function handleRemoveAthlete(athleteId) {
     await openTeam(currentTeamId);
   } catch (err) {
     console.error('Failed to remove athlete:', err);
+  }
+}
+
+async function openTeamWorkouts() {
+  try {
+    const workouts = await apiGet(`/workouts?team_id=${currentTeamId}`);
+    const container = document.getElementById('team-workouts-list');
+    const noWorkouts = document.getElementById('team-no-workouts');
+    const team = await apiGet(`/teams/${currentTeamId}`);
+    document.getElementById('workouts-team-name').textContent = `${team.name} - Treinos`;
+    document.getElementById('btn-create-workout').style.display = currentUserRole === 'coach' ? 'inline-flex' : 'none';
+
+    container.innerHTML = '';
+    if (workouts.length === 0) {
+      container.style.display = 'none';
+      noWorkouts.style.display = 'block';
+    } else {
+      container.style.display = 'flex';
+      noWorkouts.style.display = 'none';
+      workouts.forEach(w => {
+        const date = new Date(w.scheduled_at);
+        const dateStr = date.toLocaleDateString('pt-BR');
+        const timeStr = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        container.innerHTML += `
+          <div class="workout-card" onclick="openWorkout(${w.id})">
+            <span class="workout-card-title">${w.title}</span>
+            <div class="workout-card-meta">
+              <span>${dateStr} - ${timeStr}</span>
+              ${w.duration_minutes ? `<span>${w.duration_minutes} min</span>` : ''}
+              <span class="workout-status workout-status-${w.status}">${w.status === 'scheduled' ? 'Agendado' : w.status === 'completed' ? 'Concluido' : 'Cancelado'}</span>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    showPage('page-team-workouts');
+  } catch (err) {
+    console.error('Failed to load workouts:', err);
+  }
+}
+
+function showCreateWorkout() {
+  document.getElementById('workout-title').value = '';
+  document.getElementById('workout-description').value = '';
+  document.getElementById('workout-date').value = '';
+  document.getElementById('workout-time').value = '';
+  document.getElementById('workout-duration').value = '';
+  hideError('create-workout-error');
+  showPage('page-create-workout');
+}
+
+async function handleCreateWorkout(e) {
+  e.preventDefault();
+  hideError('create-workout-error');
+  const date = document.getElementById('workout-date').value;
+  const time = document.getElementById('workout-time').value;
+  const scheduledAt = `${date}T${time}:00`;
+  try {
+    await apiPost('/workouts', {
+      team_id: currentTeamId,
+      title: document.getElementById('workout-title').value,
+      description: document.getElementById('workout-description').value || null,
+      scheduled_at: scheduledAt,
+      duration_minutes: document.getElementById('workout-duration').value ? parseInt(document.getElementById('workout-duration').value) : null,
+    });
+    await openTeamWorkouts();
+  } catch (err) {
+    showError('create-workout-error', err.message);
+  }
+}
+
+async function openWorkout(workoutId) {
+  currentWorkoutId = workoutId;
+  try {
+    const workout = await apiGet(`/workouts/${workoutId}`);
+    document.getElementById('workout-detail-title').textContent = workout.title;
+    document.getElementById('workout-detail-team').textContent = `Equipe: ${workout.team.name}`;
+
+    const isCoach = currentUserRole === 'coach';
+    document.getElementById('workout-detail-actions').style.display = isCoach ? 'flex' : 'none';
+
+    const statusMap = { scheduled: 'Agendado', completed: 'Concluido', cancelled: 'Cancelado' };
+    const statusEl = document.getElementById('workout-detail-status');
+    statusEl.textContent = statusMap[workout.status] || workout.status;
+    statusEl.className = `profile-value workout-status workout-status-${workout.status}`;
+
+    const date = new Date(workout.scheduled_at);
+    document.getElementById('workout-detail-date').textContent = date.toLocaleDateString('pt-BR');
+    document.getElementById('workout-detail-time').textContent = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('workout-detail-duration').textContent = workout.duration_minutes ? `${workout.duration_minutes} minutos` : '-';
+    document.getElementById('workout-detail-desc').textContent = workout.description || '-';
+
+    showPage('page-workout-detail');
+  } catch (err) {
+    console.error('Failed to open workout:', err);
+  }
+}
+
+function showEditWorkout() {
+  document.getElementById('edit-workout-title').value = document.getElementById('workout-detail-title').textContent;
+  document.getElementById('edit-workout-description').value = document.getElementById('workout-detail-desc').textContent === '-' ? '' : document.getElementById('workout-detail-desc').textContent;
+  const duration = document.getElementById('workout-detail-duration').textContent;
+  document.getElementById('edit-workout-duration').value = duration === '-' ? '' : parseInt(duration);
+  hideError('edit-workout-error');
+  showPage('page-edit-workout');
+}
+
+async function handleEditWorkout(e) {
+  e.preventDefault();
+  hideError('edit-workout-error');
+  const date = document.getElementById('edit-workout-date').value;
+  const time = document.getElementById('edit-workout-time').value;
+  const scheduledAt = `${date}T${time}:00`;
+  try {
+    await apiPut(`/workouts/${currentWorkoutId}`, {
+      title: document.getElementById('edit-workout-title').value,
+      description: document.getElementById('edit-workout-description').value || null,
+      scheduled_at: scheduledAt,
+      duration_minutes: document.getElementById('edit-workout-duration').value ? parseInt(document.getElementById('edit-workout-duration').value) : null,
+      status: document.getElementById('edit-workout-status').value,
+    });
+    await openWorkout(currentWorkoutId);
+  } catch (err) {
+    showError('edit-workout-error', err.message);
+  }
+}
+
+async function handleDeleteWorkout() {
+  if (!confirm('Tem certeza que deseja excluir este treino?')) return;
+  try {
+    await apiDelete(`/workouts/${currentWorkoutId}`);
+    await openTeamWorkouts();
+  } catch (err) {
+    console.error('Failed to delete workout:', err);
+  }
+}
+
+async function loadAthleteWorkouts() {
+  try {
+    const workouts = await apiGet('/workouts');
+    const container = document.getElementById('athlete-workouts-list');
+    const noWorkouts = document.getElementById('athlete-no-workouts');
+    container.innerHTML = '';
+    if (workouts.length === 0) {
+      container.style.display = 'none';
+      noWorkouts.style.display = 'block';
+    } else {
+      container.style.display = 'flex';
+      noWorkouts.style.display = 'none';
+      workouts.forEach(w => {
+        const date = new Date(w.scheduled_at);
+        const dateStr = date.toLocaleDateString('pt-BR');
+        const timeStr = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        container.innerHTML += `
+          <div class="workout-card" onclick="openWorkout(${w.id})">
+            <span class="workout-card-title">${w.title}</span>
+            <div class="workout-card-meta">
+              <span class="workout-team-label">${w.team_name}</span>
+              <span>${dateStr} - ${timeStr}</span>
+              ${w.duration_minutes ? `<span>${w.duration_minutes} min</span>` : ''}
+              <span class="workout-status workout-status-${w.status}">${w.status === 'scheduled' ? 'Agendado' : w.status === 'completed' ? 'Concluido' : 'Cancelado'}</span>
+            </div>
+          </div>
+        `;
+      });
+    }
+  } catch (e) {
+    console.error('Failed to load athlete workouts:', e);
   }
 }
 

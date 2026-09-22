@@ -52,7 +52,7 @@ pytest tests/ -v
 
 ## Fase Atual
 
-**FASE 3** - Sistema de Equipes
+**FASE 4** - Sistema de Treinos
 
 ### Implementado
 
@@ -60,26 +60,25 @@ pytest tests/ -v
 - Cadastro e login (atleta/treinador)
 - Perfil de atleta e treinador
 - Atributos esportivos (0-100)
-- **Sistema de equipes:**
-  - Criar equipe (treinador)
-  - Listar equipes (treinador)
-  - Visualizar equipe (treinador/atleta)
-  - Editar nome da equipe (treinador)
-  - Excluir equipe (treinador)
-  - Adicionar atleta a equipe (treinador)
-  - Remover atleta da equipe (treinador)
-  - Visualizar minhas equipes (atleta)
-  - Validacao de esporte compativel
-  - Controle de duplicidade
-  - Autorizacao por proprietario
-- 62 testes automatizados
-- Frontend mobile-first com gerenciamento de equipes
+- Sistema de equipes
+- **Sistema de treinos:**
+  - Criar treino (treinador)
+  - Listar treinos (treinador por equipe, atleta por equipes)
+  - Visualizar treino (proprietario)
+  - Editar treino (treinador proprietario)
+  - Excluir treino (treinador proprietario)
+  - Filtros por team_id e status
+  - Status: scheduled, completed, cancelled
+  - Ordenacao por scheduled_at ASC
+  - Autorizacao por propriedade da equipe
+- 86 testes automatizados
+- Frontend mobile-first com gerenciamento de treinos
 
 ### PLANEJADO (Fases futuras)
 
-- Treinos e exercicios
+- Exercicios dentro dos treinos
+- Execucao de treinos
 - Acompanhamento de desempenho
 - Avaliacoes de treinadores
-- Escalacoes
 - Integracao com IA (modulo opcional)
 - Suporte a mais esportes

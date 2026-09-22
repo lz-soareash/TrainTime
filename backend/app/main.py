@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
 from app.database.connection import engine, Base, SessionLocal
-from app.routes import health, sports, auth, athletes, coaches, teams
+from app.routes import health, sports, auth, athletes, coaches, teams, workouts
 from app.services.seed import seed_sports
 
 
@@ -23,7 +23,7 @@ async def lifespan(app):
 app = FastAPI(
     title="TrainTime API",
     description="API da plataforma esportiva TrainTime",
-    version="0.3.0",
+    version="0.4.0",
     lifespan=lifespan,
 )
 
@@ -41,6 +41,7 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(athletes.router, prefix="/api")
 app.include_router(coaches.router, prefix="/api")
 app.include_router(teams.router, prefix="/api")
+app.include_router(workouts.router, prefix="/api")
 
 frontend_dir = Path(__file__).resolve().parent.parent.parent / "frontend"
 app.mount("/", StaticFiles(directory=str(frontend_dir), html=True), name="frontend")

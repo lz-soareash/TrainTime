@@ -16,15 +16,14 @@
 | AthleteAttribute | athlete_attributes | Valores dos atributos (0-100) |
 | Team | teams | Equipes (id, name, sport_id, coach_id, created_at) |
 | TeamAthlete | team_athletes | Relacao equipe-atleta (team_id, athlete_id, joined_at) |
+| Workout | workouts | Treinos (id, team_id, title, description, scheduled_at, duration_minutes, status, created_at, updated_at) |
 
 ### PLANEJADO
 
 | Entidade | Descricao |
 |----------|-----------|
-| Workout | Treinos criados |
-| Exercise | Exercicios |
+| Exercise | Exercicios dentro dos treinos |
 | WorkoutExercise | Relacao treino-exercicio |
-| WorkoutAssignment | Atribuicao de treino a atleta |
 | WorkoutSession | Sessao de treino executada |
 | PerformanceRecord | Registro de desempenho |
 | AthleteEvaluation | Avaliacao do treinador |
@@ -48,9 +47,20 @@ Team (1) ──→ (many) TeamAthlete
 Athlete (1) ──→ (many) TeamAthlete
 Athlete (many) ──→ (many) Team (via TeamAthlete)
 
+Team (1) ──→ (many) Workout
+
 Athlete (1) ──→ (many) AthleteAttribute
 AthleteAttribute (many) ──→ (1) SportAttribute
 ```
+
+## Regras de Treino
+
+- Apenas treinador cria treinos
+- Treinador so administra treinos de suas proprias equipes
+- Atleta visualiza treinos das equipes que participa
+- Treino pertence a uma equipe (nao diretamente a atletas)
+- Status: scheduled, completed, cancelled
+- Excluir treino nao afeta equipe, atletas ou outros treinos
 
 ## Regras de Equipe
 

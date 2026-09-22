@@ -546,6 +546,102 @@ select.form-input {
   padding: 0.5rem 0;
 }
 
+.form-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.form-group-half {
+  flex: 1;
+}
+
+.workout-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.workout-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem;
+  background: var(--bg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.workout-card:hover {
+  border-color: var(--primary);
+}
+
+.workout-card-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.workout-card-meta {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.workout-status {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 100px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.workout-status-scheduled {
+  background: rgba(26, 115, 232, 0.15);
+  color: var(--primary);
+}
+
+.workout-status-completed {
+  background: rgba(52, 168, 83, 0.15);
+  color: var(--success);
+}
+
+.workout-status-cancelled {
+  background: rgba(234, 67, 53, 0.15);
+  color: var(--error);
+}
+
+.workout-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.workout-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.workout-team {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.workout-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.workout-team-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
 .page {
   display: none;
   width: 100%;
