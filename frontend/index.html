@@ -37,7 +37,10 @@
         <div class="user-menu">
           <button class="user-menu-btn" id="btn-user-menu" onclick="toggleUserMenu(event)" aria-haspopup="true" aria-expanded="false" aria-label="Menu do usuário">
             <span class="avatar" id="header-avatar">U</span>
-            <span class="user-name" id="header-name">Usuário</span>
+            <span class="user-info">
+              <span class="user-name" id="header-name">Usuário</span>
+              <small class="user-detail" id="header-role"></small>
+            </span>
             <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="6 9 12 15 18 9"/>
             </svg>
@@ -253,19 +256,34 @@
         <section class="main-cards" id="main-cards"></section>
 
         <div class="dash-layout">
-          <div class="dash-content" id="dash-teams-section">
-            <div class="section-head">
-              <h2 class="section-title" id="teams-section-title">Suas Equipes</h2>
-              <button class="link-btn" id="teams-see-all" onclick="scrollToSection('dash-teams-section')">Ver todas →</button>
+          <div class="dash-content">
+            <div id="dash-teams-section">
+              <div class="section-head">
+                <h2 class="section-title" id="teams-section-title">Suas Equipes</h2>
+                <span class="link-btn" onclick="scrollToSection('dash-teams-section')">Ver todas →</span>
+              </div>
+              <div class="teams-grid" id="dash-teams-grid"></div>
+              <div class="skeleton-grid" id="dash-teams-loading"></div>
+              <div class="empty-state" id="dash-teams-empty" hidden></div>
+              <div class="error-state" id="dash-teams-error" hidden></div>
             </div>
-            <div class="teams-grid" id="dash-teams-grid"></div>
-            <div class="skeleton-grid" id="dash-teams-loading"></div>
-            <div class="empty-state" id="dash-teams-empty" hidden></div>
-            <div class="error-state" id="dash-teams-error" hidden></div>
+
+            <section class="roadmap" aria-label="Roadmap do projeto">
+              <div class="roadmap-top">
+                <span class="r-icon" aria-hidden="true">📋</span>
+                <div class="roadmap-text">
+                  <h3 class="roadmap-title">Fase 6 — Execução dos Treinos <span class="pill">Próxima fase</span></h3>
+                  <p>Em breve você poderá acompanhar a execução dos treinos, registrar o desempenho dos atletas e muito mais!</p>
+                </div>
+                <button class="btn btn-ghost btn-sm roadmap-btn" onclick="scrollToSection('phase-steps')">Saiba mais →</button>
+              </div>
+              <ol class="steps" id="phase-steps"></ol>
+            </section>
           </div>
 
           <aside class="dash-sidebar">
             <div class="card sidebar-card">
+              <h3 class="sidebar-card-title">Seu Perfil</h3>
               <div class="profile-hed">
                 <span class="avatar-xlg" id="sidebar-avatar">U</span>
                 <div class="profile-hed-info">
@@ -273,23 +291,18 @@
                   <span class="role-pill" id="sidebar-role">Perfil</span>
                 </div>
               </div>
+              <h4 class="sidebar-subtitle" id="sidebar-subtitle">Esportes que trabalha</h4>
               <div class="sidebar-block" id="sidebar-block"></div>
+              <div class="sidebar-actions" id="sidebar-actions"></div>
               <blockquote class="sidebar-quote">
                 <span class="hero-quote-mark" aria-hidden="true">“</span>
                 <span id="sidebar-quote">Grandes resultados vêm de grandes planejamentos.</span>
               </blockquote>
             </div>
 
-            <div class="card sidebar-card">
-              <h3 class="sidebar-card-title">Desenvolvimento do TrainTime</h3>
-              <div class="phase-steps" id="phase-steps"></div>
-            </div>
-
-            <div class="card sidebar-card next-phase-card">
-              <span class="next-phase-icon" aria-hidden="true">🚀</span>
-              <h3 class="sidebar-card-title">Fase 6 — Execução dos Treinos</h3>
-              <p>Em breve você poderá acompanhar a execução dos treinos e registrar o desempenho dos atletas.</p>
-              <button class="btn btn-ghost btn-sm" onclick="scrollToSection('phase-steps')">Saiba mais →</button>
+            <div class="card sidebar-card progress-card">
+              <span class="progress-card-icon" aria-hidden="true">☁️</span>
+              <p>O progresso dos seus atletas começa com um bom treino.</p>
             </div>
           </aside>
         </div>

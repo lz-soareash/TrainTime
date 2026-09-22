@@ -104,7 +104,8 @@ function skeletonCards(count) {
 
 function renderAppHeader(user) {
   document.getElementById('header-avatar').textContent = initials(user.name);
-  document.getElementById('header-name').textContent = (user.name || '').split(' ')[0] || 'Usuário';
+  document.getElementById('header-name').textContent = `Olá, ${(user.name || '').split(' ')[0] || 'Usuário'}`;
+  document.getElementById('header-role').textContent = user.role === 'coach' ? 'Treinador' : 'Atleta';
 }
 
 function toggleUserMenu(event) {
@@ -316,6 +317,7 @@ async function loadDashboard() {
       : 'Grandes resultados vêm de grandes planejamentos.';
     document.getElementById('sidebar-role').textContent = isAthlete ? 'Atleta' : 'Treinador';
     document.getElementById('dashboard-role').textContent = isAthlete ? 'Perfil Atleta' : 'Perfil Treinador';
+    document.getElementById('sidebar-subtitle').textContent = isAthlete ? 'Seu esporte e atributos' : 'Esportes que trabalha';
     document.getElementById('teams-section-title').textContent = isAthlete ? 'Minhas Equipes' : 'Suas Equipes';
     document.getElementById('dashboard-welcome').textContent = isAthlete
       ? 'Vamos treinar? Seu esforço de hoje constrói seu resultado de amanhã.'
@@ -372,33 +374,60 @@ async function loadDashboard() {
 function renderTeamsGrid(isAthlete, teams, workoutCounts) {
   const grid = document.getElementById('dash-teams-grid');
   grid.innerHTML = '';
+  const AVATAR_FACES = ['🧑', '👩', '🧔', '👱'];
   teams.forEach((t, i) => {
     const count = workoutCounts[t.id] || 0;
-    const countText = count > 0 ? `${count} treino${count !== 1 ? 's' : ''}` : 'sem treinos';
+    const countText = `${count} treino${count !== 1 ? 's ativos' : ' ativo'}`;
     const athleteText = isAthlete
       ? (t.coach_name ? `Coach: ${t.coach_name}` : t.sport.name)
       : `${t.sport.name} · ${t.athlete_count || 0} atleta${(t.athlete_count || 0) === 1 ? '' : 's'}`;
+    const isNew = isAthlete ? false : isNewTeam(t.created_at);
+    const badge = isNew ? '<span class="badge badge--new">Nova</span>' : '';
+    const icon = t.sport.icon || '🏅';
+    const avatarCount = isAthlete ? 0 : (t.athlete_count || 0);
+    let avatars = '';
+    if (avatarCount > 0) {
+      const show = Math.min(avatarCount, 3);
+      let stack = '';
+      for (let a = 0; a < show; a++) {
+        stack += `<i>${AVATAR_FACES[a % AVATAR_FACES.length]}</i>`;
+      }
+      const extra = avatarCount - show;
+      stack += extra > 0 ? `<b>+${extra}</b>` : `<b>${avatarCount}</b>`;
+      avatars = `<div class="team-avatars" aria-label="${avatarCount} atleta${avatarCount !== 1 ? 's' : ''}">${stack}</div>`;
+    } else if (isAthlete) {
+      avatars = '';
+    }
     grid.innerHTML += `
-      <div class="team-grid-card" onclick="openTeam(${t.id})" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')openTeam(${t.id})">
-        <div class="team-visual ${i % 2 ? 'team-visual--purple' : ''}">
-          <span class="team-visual-icon" aria-hidden="true">${t.sport.icon || '🏅'}</span>
-          <span class="team-visual-badge">${t.sport.name}</span>
+      <article class="team-grid-card" onclick="openTeam(${t.id})" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')openTeam(${t.id})">
+        <div class="team-visual team-visual--${i % 2 ? 'purple' : 'blue'}">
+          <span class="team-visual-icon" aria-hidden="true">${icon}</span>
         </div>
-        <div class="team-grid-body">
-          <div class="team-grid-group">
-            <h3 class="team-grid-name">${t.name}</h3>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="color:var(--text-muted)">
+        <div class="team-body">
+          <div class="team-title">
+            <span class="ticon" aria-hidden="true">${icon}</span>
+            <div class="team-title-info">
+              <strong>${t.name}</strong>${badge}
+              <small>${athleteText}</small>
+            </div>
+            <svg class="team-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <polyline points="9 18 15 12 9 6"/>
             </svg>
           </div>
-          <p class="team-grid-sport">${athleteText}</p>
-          <div class="team-grid-group">
-            <span class="team-grid-count">📅 ${countText}</span>
-          </div>
+          <p class="team-meta">📅 ${countText}</p>
+          ${avatars}
         </div>
-      </div>
+      </article>
     `;
   });
+}
+
+function isNewTeam(createdAt) {
+  if (!createdAt) return false;
+  const created = new Date(createdAt);
+  if (isNaN(created.getTime())) return false;
+  const days = (Date.now() - created.getTime()) / 86400000;
+  return days >= 0 && days <= 7;
 }
 
 function renderTeamsEmpty(isAthlete) {
@@ -446,13 +475,11 @@ function renderSidebar(isAthlete, profile, attributes) {
     }
   }
 
-  block.innerHTML += `
-    <div class="sidebar-actions">
-      <button class="btn btn-secondary btn-sm" onclick="showProfileEdit()">Editar perfil</button>
-      ${isAthlete
-        ? '<button class="btn btn-secondary btn-sm" onclick="showAttributesEdit()">Avaliar atributos</button>'
-        : '<button class="btn btn-secondary btn-sm" onclick="openExerciseLibrary()">Biblioteca de exercícios</button>'}
-    </div>
+  document.getElementById('sidebar-actions').innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="showProfileEdit()">Editar perfil</button>
+    ${isAthlete
+      ? '<button class="btn btn-secondary btn-sm" onclick="showAttributesEdit()">Avaliar atributos</button>'
+      : '<button class="btn btn-secondary btn-sm" onclick="openExerciseLibrary()">Biblioteca de exercícios</button>'}
   `;
 }
 
@@ -476,11 +503,11 @@ function renderMainCards(isAthlete, teamCount, scheduledCount, totalWorkouts) {
         <p class="main-card-desc">Visualize as equipes que você participa.</p>
         ${teamsBtn}
       </div>
-      <div class="main-card">
+      <div class="main-card main-card--locked">
         <span class="main-card-icon" aria-hidden="true">📈</span>
         <h3 class="main-card-title">Meu Progresso</h3>
         <p class="main-card-desc">Acompanhe sua evolução nos treinos e atributos.</p>
-        <span class="badge-coming">Em breve</span>
+        <span class="badge-coming">🔒 Em breve</span>
       </div>
     `;
   } else {
@@ -499,11 +526,11 @@ function renderMainCards(isAthlete, teamCount, scheduledCount, totalWorkouts) {
         <p class="main-card-desc">Crie e gerencie seus treinos de forma simples e organizada.</p>
         <button class="btn btn-primary btn-sm" onclick="scrollToSection('dash-teams-section')">Ver treinos →</button>
       </div>
-      <div class="main-card">
+      <div class="main-card main-card--locked">
         <span class="main-card-icon" aria-hidden="true">📊</span>
         <h3 class="main-card-title">Performance</h3>
         <p class="main-card-desc">Acompanhe a evolução dos seus atletas.</p>
-        <span class="badge-coming">Em breve</span>
+        <span class="badge-coming">🔒 Em breve</span>
       </div>
     `;
   }
@@ -511,19 +538,19 @@ function renderMainCards(isAthlete, teamCount, scheduledCount, totalWorkouts) {
 
 function renderPhases() {
   const phases = [
-    { n: 1, label: 'Fundamentos', done: true },
-    { n: 2, label: 'Usuários & Auth', done: true },
+    { n: 1, label: 'Fundação', done: true },
+    { n: 2, label: 'Usuários', done: true },
     { n: 3, label: 'Equipes', done: true },
     { n: 4, label: 'Treinos', done: true },
     { n: 5, label: 'Exercícios', done: true },
-    { n: 6, label: 'Execução dos Treinos', done: false, current: true },
-    { n: 7, label: 'Desempenho', done: false },
+    { n: 6, label: 'Execução', done: false, current: true },
+    { n: 7, label: 'Performance', done: false },
   ];
   document.getElementById('phase-steps').innerHTML = phases.map(p => `
-    <div class="phase-step ${p.done ? 'phase-step--done' : p.current ? 'phase-step--current' : 'phase-step--next'}">
-      <span class="phase-step-dot" aria-hidden="true">${p.done ? '✓' : p.n}</span>
-      <span>Fase ${p.n} — ${p.label}</span>
-    </div>
+    <li class="${p.done ? 'done' : p.current ? 'current' : ''}">
+      <i aria-hidden="true">${p.done ? '✓' : p.current ? '●' : '○'}</i>
+      <span>Fase ${p.n}<small>${p.label}</small></span>
+    </li>
   `).join('');
 }
 

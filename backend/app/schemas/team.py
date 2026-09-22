@@ -54,3 +54,4 @@ class TeamListResponse(BaseModel):
     name: str
     sport: SportBasic
     athlete_count: int
+    created_at: datetime | None = None

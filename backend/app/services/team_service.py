@@ -43,6 +43,7 @@ def list_coach_teams(db: Session, coach_id: int) -> list[dict]:
             "name": team.name,
             "sport": team.sport,
             "athlete_count": athlete_count,
+            "created_at": team.created_at,
         })
     return result
 

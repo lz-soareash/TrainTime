@@ -301,6 +301,19 @@ button {
   white-space: nowrap;
 }
 
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+
+.user-detail {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
 .user-dropdown {
   position: absolute;
   right: 0;
@@ -925,11 +938,43 @@ input[type="time"].form-input {
 }
 
 .main-card--featured {
-  border-color: rgba(22, 131, 255, 0.35);
-  background:
-    radial-gradient(120% 130% at 100% 0%, rgba(22, 131, 255, 0.14), transparent 55%),
-    linear-gradient(180deg, var(--surface), var(--surface-2));
+  border-color: rgba(22, 131, 255, 0.45);
+  background: linear-gradient(135deg, #1E4FD8 0%, #1683FF 100%);
   box-shadow: var(--glow-blue);
+}
+
+.main-card--featured .main-card-title {
+  color: #fff;
+}
+
+.main-card--featured .main-card-desc {
+  color: #DCE7FF;
+}
+
+.main-card--featured .main-card-count {
+  color: #fff;
+}
+
+.main-card--featured .main-card-icon {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.main-card--featured .btn {
+  background: #fff;
+  color: #123058;
+  border-color: transparent;
+}
+
+.main-card--featured .btn:hover {
+  background: #EAF1FF;
+}
+
+.main-card--locked {
+  opacity: 0.75;
+}
+
+.main-card--locked .main-card-icon {
+  background: var(--surface-3);
 }
 
 .main-card-icon {
@@ -941,10 +986,6 @@ input[type="time"].form-input {
   border-radius: 16px;
   background: var(--accent-blue-soft);
   font-size: 1.6rem;
-}
-
-.main-card--featured .main-card-icon {
-  background: var(--gradient-brand);
 }
 
 .main-card-title {
@@ -1011,41 +1052,30 @@ input[type="time"].form-input {
 
 .team-visual {
   position: relative;
-  height: 120px;
+  height: 96px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.team-visual--blue {
   background:
-    radial-gradient(120% 160% at 20% 0%, rgba(22, 131, 255, 0.25), transparent 55%),
-    linear-gradient(160deg, #18233a, #11151F);
+    radial-gradient(120% 170% at 20% 0%, rgba(22, 131, 255, 0.3), transparent 55%),
+    linear-gradient(160deg, #172449, #11151F);
 }
 
 .team-visual--purple {
   background:
-    radial-gradient(120% 160% at 20% 0%, rgba(108, 77, 255, 0.28), transparent 55%),
-    linear-gradient(160deg, #211a3f, #11151F);
+    radial-gradient(120% 170% at 20% 0%, rgba(108, 77, 255, 0.32), transparent 55%),
+    linear-gradient(160deg, #221a48, #11151F);
 }
 
 .team-visual-icon {
-  font-size: 3.2rem;
+  font-size: 2.7rem;
   filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.45));
 }
 
-.team-visual-badge {
-  position: absolute;
-  top: var(--space-3);
-  right: var(--space-3);
-  background: rgba(11, 13, 19, 0.7);
-  backdrop-filter: blur(6px);
-  border: 1px solid var(--border);
-  padding: 0.2rem 0.6rem;
-  border-radius: 999px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.team-grid-body {
+.team-body {
   padding: var(--space-4);
   display: flex;
   flex-direction: column;
@@ -1053,31 +1083,98 @@ input[type="time"].form-input {
   flex: 1;
 }
 
-.team-grid-group {
+.team-title {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
+  align-items: flex-start;
+  gap: var(--space-3);
 }
 
-.team-grid-name {
-  font-size: 1rem;
+.ticon {
+  font-size: 1.5rem;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.team-title-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.team-title-info strong {
+  font-size: 0.98rem;
   font-weight: 700;
   letter-spacing: -0.2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.team-grid-sport {
+.team-title-info small {
   color: var(--text-secondary);
-  font-size: 0.84rem;
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.team-grid-count {
-  background: var(--accent-blue-soft);
-  color: var(--accent-blue-2);
-  padding: 0.3rem 0.8rem;
-  border-radius: 999px;
-  font-size: 0.78rem;
+.badge--new {
+  display: inline-block;
+  vertical-align: middle;
+  background: var(--accent-blue);
+  color: #fff;
+  font-size: 0.58rem;
   font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  margin-left: 8px;
+}
+
+.team-arrow {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.team-meta {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  margin-top: var(--space-1);
+}
+
+.team-avatars {
+  display: flex;
+  align-items: center;
+  margin-top: var(--space-1);
+}
+
+.team-avatars i {
+  font-style: normal;
+  background: var(--surface-3);
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  display: inline-grid;
+  place-items: center;
+  margin-right: -6px;
+  border: 2px solid var(--surface-2);
+  font-size: 0.7rem;
+}
+
+.team-avatars b {
+  background: var(--accent-blue);
+  color: #fff;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  display: inline-grid;
+  place-items: center;
+  font-size: 0.7rem;
+  margin-left: 8px;
 }
 
 /* Sidebar */
@@ -1180,82 +1277,182 @@ input[type="time"].form-input {
   gap: var(--space-1);
 }
 
-/* Phase progress */
-.phase-steps {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+/* Roadmap (fases do projeto) */
+.roadmap {
+  margin-top: var(--space-6);
+  background:
+    radial-gradient(120% 150% at 100% 0%, rgba(22, 131, 255, 0.12), transparent 55%),
+    linear-gradient(150deg, #131A2B, #0E1118);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
 }
 
-.phase-step {
+.roadmap-top {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.r-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.roadmap-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.roadmap-title {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+}
+
+.roadmap-title .pill {
+  display: inline-block;
+  vertical-align: middle;
+  background: var(--accent-blue);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  margin-left: 8px;
+}
+
+.roadmap-text p {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+
+.roadmap-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.steps {
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--space-5);
+  overflow-x: auto;
+  padding-bottom: var(--space-1);
+}
+
+.steps li {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  font-size: 0.86rem;
+  gap: var(--space-2);
+  position: relative;
+  flex: 1 0 auto;
+  color: var(--text-muted);
+  font-size: 0.72rem;
   font-weight: 600;
 }
 
-.phase-step-dot {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
+.steps li::after {
+  content: "";
+  height: 2px;
+  background: var(--border-strong);
+  flex: 1;
+  margin-left: 2px;
+}
+
+.steps li:last-child::after {
+  display: none;
+}
+
+.steps li.done::after {
+  background: var(--accent-blue);
+}
+
+.steps i {
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-style: normal;
+  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
   flex-shrink: 0;
-  font-size: 0.72rem;
-  font-weight: 800;
 }
 
-.phase-step--done {
-  background: var(--success-soft);
-  color: var(--success);
-}
-
-.phase-step--done .phase-step-dot {
-  background: var(--success);
+.steps .done i {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
   color: #fff;
 }
 
-.phase-step--current {
+.steps .current i {
+  border: 2px solid var(--accent-blue-2);
   background: var(--accent-blue-soft);
   color: var(--accent-blue-2);
 }
 
-.phase-step--current .phase-step-dot {
-  background: var(--gradient-brand);
-  color: #fff;
+.steps li span {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
-.phase-step--next {
+.steps li span small {
   color: var(--text-muted);
-  background: transparent;
-  border: 1px dashed var(--border-strong);
+  font-size: 0.68rem;
+  font-weight: 500;
 }
 
-.phase-step--next .phase-step-dot {
-  border: 1px solid var(--border-strong);
+.steps .done span,
+.steps .current span {
+  color: var(--text-primary);
 }
 
-.next-phase-card {
+/* Sidebar — perfil */
+.sidebar-subtitle {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin: var(--space-4) 0 var(--space-2);
+}
+
+.progress-card {
   background:
-    radial-gradient(120% 150% at 100% 0%, rgba(108, 77, 255, 0.15), transparent 55%),
+    radial-gradient(120% 150% at 100% 0%, rgba(22, 131, 255, 0.14), transparent 55%),
     linear-gradient(180deg, var(--surface-2), var(--surface));
+  text-align: center;
 }
 
-.next-phase-icon {
-  font-size: 1.6rem;
+.progress-card-icon {
+  font-size: 1.8rem;
   display: block;
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
-.next-phase-card p {
+.progress-card p {
   color: var(--text-secondary);
   font-size: 0.88rem;
   line-height: 1.5;
-  margin-bottom: var(--space-4);
+  margin: 0 auto;
+  max-width: 240px;
 }
 
 /* ============================================================
@@ -1900,7 +2097,8 @@ input[type="time"].form-input {
 }
 
 @media (max-width: 420px) {
-  .user-name {
+  .user-name,
+  .user-detail {
     display: none;
   }
 
@@ -1914,6 +2112,23 @@ input[type="time"].form-input {
 
   .workout-meta {
     flex-direction: column;
+  }
+
+  .roadmap-top {
+    flex-wrap: wrap;
+  }
+
+  .roadmap-btn {
+    display: none;
+  }
+
+  .roadmap-title .pill {
+    display: none;
+  }
+
+  .steps li {
+    flex: 0 0 auto;
+    padding-right: var(--space-4);
   }
 }
 
