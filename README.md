@@ -52,7 +52,7 @@ pytest tests/ -v
 
 ## Fase Atual
 
-**FASE 5** - Consolidacao: Perfis, Atributos e Sistema de Exercicios
+**FASE 8** - Metas (Goals) e Acompanhamento de Progresso
 
 ### Implementado
 
@@ -88,9 +88,17 @@ pytest tests/ -v
   - Remover exercicio do treino (treinador proprietario, validando o treino da URL)
   - Validacao de esporte compativel
   - Mesmo exercicio pode aparecer varias vezes
-  - Configuracao: order, sets, repetitions, duration_seconds, distance_meters, rest_seconds, notes
-- 137 testes automatizados
-- Frontend mobile-first com gerenciamento de perfis, atributos, exercicios e treinos
+  - Configuracao: order, sets, repetitions, duration, distance, rest, notes
+- **Metas (Goals):**
+  - Criar metas por atleta (treinador) ou para si mesmo (atleta)
+  - Listar metas (atleta: as proprias; treinador: dos atletas das suas equipes)
+  - Filtros por status (todas/ativas/concluidas/canceladas)
+  - Atualizar progresso; conclusao automatica quando current >= target
+  - Cancelar meta
+  - `progress_percentage` e `athlete_name` calculados na resposta
+  - Pagina de metas no frontend (cards, barra de progresso, formulario de criacao com selecao de atleta para treinador)
+- 167 testes automatizados (13 somente metas)
+- Frontend mobile-first com gerenciamento de perfis, atributos, exercicios, treinos e metas
 
 ### PLANEJADO (Fases futuras)
 

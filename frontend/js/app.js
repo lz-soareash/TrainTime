@@ -543,8 +543,9 @@ function renderPhases() {
     { n: 3, label: 'Equipes', done: true },
     { n: 4, label: 'Treinos', done: true },
     { n: 5, label: 'Exercícios', done: true },
-    { n: 6, label: 'Execução', done: false, current: true },
-    { n: 7, label: 'Performance', done: false },
+    { n: 6, label: 'Execução', done: true },
+    { n: 7, label: 'Performance', done: true },
+    { n: 8, label: 'Metas', done: true },
   ];
   document.getElementById('phase-steps').innerHTML = phases.map(p => `
     <li class="${p.done ? 'done' : p.current ? 'current' : ''}">
@@ -1535,6 +1536,221 @@ async function handleLibraryDeleteExercise(exerciseId) {
     await loadExerciseLibrary();
   } catch (err) {
     showLibraryFeedback(err.message);
+  }
+}
+
+let currentGoalFilter = '';
+
+async function openGoalsPage() {
+  hideError('goal-create-error');
+  const athleteGroup = document.getElementById('goal-form-athlete-group');
+  const roleEl = document.getElementById('goals-role');
+  const isCoach = currentUserRole === 'coach';
+  roleEl.textContent = isCoach ? 'METAS · TREINADOR' : 'METAS';
+  athleteGroup.style.display = isCoach ? 'block' : 'none';
+  document.getElementById('goal-athlete').required = isCoach;
+  if (isCoach) await populateGoalAthletes();
+  showPage('page-goals');
+  await loadGoals();
+}
+
+async function populateGoalAthletes() {
+  const select = document.getElementById('goal-athlete');
+  select.innerHTML = '<option value="">Selecione o atleta...</option>';
+  try {
+    const teams = await apiGet('/teams');
+    const options = [];
+    await Promise.all(teams.map(async (team) => {
+      try {
+        const athletes = await apiGet(`/teams/${team.id}/athletes`);
+        if (athletes.length > 0) {
+          options.push(`<optgroup label="${team.name}">`);
+          athletes.forEach(a => {
+            options.push(`<option value="${a.id}">${a.name}</option>`);
+          });
+          options.push('</optgroup>');
+        }
+      } catch (err) {
+        console.error('Failed to load athletes for team', team.id, err);
+      }
+    }));
+    select.innerHTML += options.join('');
+  } catch (err) {
+    console.error('Failed to load teams for goal athletes:', err);
+  }
+}
+
+async function loadGoals() {
+  const loading = document.getElementById('goals-loading');
+  const grid = document.getElementById('goals-grid');
+  const empty = document.getElementById('goals-empty');
+  const error = document.getElementById('goals-error');
+  loading.style.display = 'grid';
+  grid.style.display = 'none';
+  empty.style.display = 'none';
+  error.hidden = true;
+  error.innerHTML = '';
+  loading.innerHTML = skeletonCards(3);
+  const filters = document.querySelectorAll('.go-filter');
+  filters.forEach(f => {
+    f.classList.toggle('go-filter--active', f.dataset.status === currentGoalFilter);
+  });
+  try {
+    const query = currentGoalFilter ? `?status=${encodeURIComponent(currentGoalFilter)}` : '';
+    const goals = await apiGet(`/goals${query}`);
+    loading.style.display = 'none';
+    if (goals.length === 0) {
+      grid.style.display = 'none';
+      empty.style.display = 'flex';
+      empty.innerHTML = emptyStateHTML('🎯', 'Nenhuma meta aqui', currentUserRole === 'coach'
+        ? 'Crie metas para acompanhar a evolução dos seus atletas.'
+        : 'Defina sua primeira meta e acompanhe seu progresso.',
+        '<button class="btn btn-primary btn-sm" onclick="showCreateGoal()">+ Nova meta</button>');
+      return;
+    }
+    grid.style.display = 'grid';
+    grid.innerHTML = goals.map(renderGoalCard).join('');
+  } catch (err) {
+    loading.style.display = 'none';
+    error.hidden = false;
+    error.innerHTML = `<span class="error-icon" aria-hidden="true">⚠️</span><strong>Não foi possível carregar as metas.</strong><p>${err.message}</p><button class="btn btn-secondary btn-sm" onclick="loadGoals()">Tentar novamente</button>`;
+  }
+}
+
+function goalStatusLabel(status) {
+  return { active: 'Ativa', completed: 'Concluída', cancelled: 'Cancelada' }[status] || status;
+}
+
+function formatGoalDeadline(deadline) {
+  const d = new Date(deadline);
+  if (isNaN(d.getTime())) return deadline;
+  return `${d.toLocaleDateString('pt-BR')} ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+function renderGoalCard(goal) {
+  const pct = goal.progress_percentage || 0;
+  const done = goal.status === 'completed';
+  const cancelled = goal.status === 'cancelled';
+  const barColor = cancelled ? 'var(--danger, #e5484d)' : (done ? 'var(--success, #30a46c)' : (pct >= 60 ? 'var(--accent-blue-2, #5bc0eb)' : 'var(--accent-gold, #f0a500)'));
+  let statusColor = 'var(--accent-sky, #40c4ff)';
+  if (done) statusColor = 'var(--success, #30a46c)';
+  if (cancelled) statusColor = 'var(--danger, #e5484d)';
+  const athleteName = goal.athlete_name ? `<span class="goal-athlete-name">👤 ${goal.athlete_name}</span>` : '';
+  return `
+    <article class="goal-card">
+      <div class="goal-card-top">
+        <div class="goal-card-track">
+          <strong>🎯 ${goal.title}</strong>
+          <span class="goal-status" style="color:${statusColor}">${goalStatusLabel(goal.status)}</span>
+        </div>
+        <p class="goal-card-metric">${goal.metric}: ${goal.current_value} / ${goal.target_value} ${goal.unit}</p>
+        ${athleteName}
+        <p class="goal-card-deadline">📅 ${formatGoalDeadline(goal.deadline)}</p>
+        ${goal.description ? `<p class="goal-card-desc">${goal.description}</p>` : ''}
+      </div>
+      <div class="goal-progress">
+        <span class="goal-progress-label">${pct}%</span>
+        <div class="goal-progress-track">
+          <div class="goal-progress-bar" style="width:${pct}%;background:${barColor}"></div>
+        </div>
+      </div>
+      ${cancelled ? '' : `
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn btn-secondary btn-sm" onclick="handleUpdateGoalProgress(${goal.id}, event.target)">Atualizar progresso</button>
+        <button class="btn btn-sm btn-ghost" onclick="handleCancelGoal(${goal.id})">Cancelar meta</button>
+      </div>`}
+    </article>
+  `;
+}
+
+function applyGoalFilter(status) {
+  hideError('goal-create-error');
+  showCreateGoal(null);
+  currentGoalFilter = status || '';
+  loadGoals();
+}
+
+function showCreateGoal() {
+  hideError('goal-create-error');
+  const form = document.getElementById('goal-create-form');
+  const showing = form.style.display === 'block';
+  form.style.display = showing ? 'none' : 'block';
+  if (!showing) {
+    const isCoach = currentUserRole === 'coach';
+    document.getElementById('goal-form-athlete-group').style.display = isCoach ? 'block' : 'none';
+    document.getElementById('goal-athlete').required = isCoach;
+    document.getElementById('goal-title').value = '';
+    document.getElementById('goal-metric').value = '';
+    document.getElementById('goal-target').value = '';
+    document.getElementById('goal-unit').value = '';
+    document.getElementById('goal-deadline').value = '';
+    document.getElementById('goal-description').value = '';
+    if (isCoach && document.getElementById('goal-athlete').options.length <= 1) {
+      populateGoalAthletes();
+    }
+    form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+async function handleCreateGoal(e) {
+  e.preventDefault();
+  hideError('goal-create-error');
+  const btn = document.getElementById('btn-create-goal-submit');
+  btn.disabled = true;
+  const body = {
+    title: document.getElementById('goal-title').value,
+    metric: document.getElementById('goal-metric').value,
+    target_value: parseFloat(document.getElementById('goal-target').value),
+    unit: document.getElementById('goal-unit').value,
+    deadline: new Date(document.getElementById('goal-deadline').value).toISOString(),
+  };
+  const desc = document.getElementById('goal-description').value;
+  if (desc) body.description = desc;
+  if (currentUserRole === 'coach') {
+    body.athlete_id = parseInt(document.getElementById('goal-athlete').value, 10);
+    if (!body.athlete_id) {
+      showError('goal-create-error', 'Selecione o atleta.');
+      btn.disabled = false;
+      return;
+    }
+  }
+  try {
+    await apiPost('/goals', body);
+    showCreateGoal(null);
+    await loadGoals();
+  } catch (err) {
+    showError('goal-create-error', err.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function handleUpdateGoalProgress(goalId, btn) {
+  const value = prompt('📈 Digite o valor atual de progresso:');
+  if (value === null) return;
+  const current = parseFloat(value);
+  if (isNaN(current) || current < 0) {
+    alert('Valor inválido.');
+    return;
+  }
+  btn.disabled = true;
+  try {
+    await apiPut(`/goals/${goalId}`, { current_value: current });
+    await loadGoals();
+  } catch (err) {
+    alert(`Não foi possível atualizar: ${err.message}`);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function handleCancelGoal(goalId) {
+  if (!confirm('Cancelar esta meta?')) return;
+  try {
+    await apiDelete(`/goals/${goalId}`);
+    await loadGoals();
+  } catch (err) {
+    alert(`Não foi possível cancelar: ${err.message}`);
   }
 }
 

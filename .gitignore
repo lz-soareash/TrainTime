@@ -17,6 +17,16 @@ build/
 .pytest_cache/
 uvicorn.log
 uvicorn.err.log
+uvicorn.out.log
+uvicorn.err.out.log
+uvicorn.pid
+uvicorn.out.log.*
+uvicorn.run.pid
+.pytest_cache/
+uid>
 node_modules/
 .DS_Store
 Thumbs.db
+
+uvicorn.out.log
+uvicorn.pid

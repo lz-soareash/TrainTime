@@ -75,6 +75,14 @@
               </svg>
               Exercícios
             </button>
+            <button id="menu-goals" onclick="openGoalsPage()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <circle cx="12" cy="12" r="6"/>
+                <circle cx="12" cy="12" r="2"/>
+              </svg>
+              Metas
+            </button>
             <button onclick="handleLogout()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -822,6 +830,83 @@
             <button class="btn btn-ghost" type="button" onclick="showLibraryForm(null)">Cancelar</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- ============ GOALS ============ -->
+    <div id="page-goals" class="page page-app">
+      <a class="back-link" onclick="showPage('page-dashboard')">&#8592; Voltar</a>
+      <div class="dash">
+        <section class="hero">
+          <div class="hero-text">
+            <p class="hero-eyebrow" id="goals-role">METAS</p>
+            <h1 class="hero-title">🎯 Metas</h1>
+            <p class="hero-sub" id="goals-welcome">Defina objetivos e acompanhe o progresso.</p>
+          </div>
+          <div class="hero-quote">
+            <span class="hero-quote-mark">“</span>
+            <p class="hero-quote-text" id="goals-hero-quote">Cada meta alcançada é um passo a mais na sua evolução.</p>
+            <span class="hero-quote-icon" aria-hidden="true">🎯</span>
+          </div>
+        </section>
+
+        <div class="section-head" style="margin-top:8px">
+          <div class="goals-filters" role="group" aria-label="Filtrar metas por status">
+            <button class="btn btn-secondary btn-sm go-filter" data-status="" onclick="applyGoalFilter('')">Todas</button>
+            <button class="btn btn-secondary btn-sm go-filter" data-status="active" onclick="applyGoalFilter('active')">Ativas</button>
+            <button class="btn btn-secondary btn-sm go-filter" data-status="completed" onclick="applyGoalFilter('completed')">Concluídas</button>
+            <button class="btn btn-secondary btn-sm go-filter" data-status="cancelled" onclick="applyGoalFilter('cancelled')">Canceladas</button>
+          </div>
+          <button class="btn btn-primary btn-sm" id="btn-create-goal" onclick="showCreateGoal()">+ Nova meta</button>
+        </div>
+
+        <div id="goals-loading" class="skeleton-grid" style="display:none"></div>
+        <div id="goals-grid" class="teams-grid" style="display:none"></div>
+        <div id="goals-empty" class="empty-state" style="display:none"></div>
+        <div class="error-state" id="goals-error" hidden></div>
+
+        <div class="card page-card" id="goal-create-form" style="display:none; margin-top:16px">
+          <h3 class="card-subtitle" id="goal-form-title">Nova meta</h3>
+          <form onsubmit="handleCreateGoal(event)">
+            <div class="form-group" id="goal-form-athlete-group" style="display:none">
+              <label class="form-label" for="goal-athlete">Atleta</label>
+              <select class="form-input" id="goal-athlete" required></select>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="goal-title">Título</label>
+                <input class="form-input" type="text" id="goal-title" required minlength="1" placeholder="Ex: Melhorar finalização">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="goal-metric">Métrica</label>
+                <input class="form-input" type="text" id="goal-metric" required minlength="1" placeholder="Ex: finalizacao">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="goal-target">Meta (valor)</label>
+                <input class="form-input" type="number" id="goal-target" required min="0.01" step="0.01" placeholder="Ex: 90">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="goal-unit">Unidade</label>
+                <input class="form-input" type="text" id="goal-unit" required minlength="1" placeholder="Ex: pontos">
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="goal-deadline">Prazo</label>
+              <input class="form-input" type="datetime-local" id="goal-deadline" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="goal-description">Descrição</label>
+              <input class="form-input" type="text" id="goal-description" placeholder="Opcional">
+            </div>
+            <div id="goal-create-error" class="form-error" style="display:none" role="alert"></div>
+            <div class="btn-row">
+              <button class="btn btn-primary" type="submit" id="btn-create-goal-submit">Criar meta</button>
+              <button class="btn btn-ghost" type="button" onclick="showCreateGoal(null)">Cancelar</button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
 

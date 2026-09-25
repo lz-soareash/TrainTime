@@ -6,7 +6,11 @@ from pathlib import Path
 
 from app.database.connection import engine, Base, SessionLocal
 from app.database.migrations import run_migrations
-from app.routes import health, sports, auth, athletes, coaches, teams, workouts, exercises, workout_exercises
+from app.routes import (
+    health, sports, auth, athletes, coaches, teams, workouts,
+    exercises, workout_exercises, workout_executions, performance,
+    goals,
+)
 from app.services.seed import seed_sports
 
 
@@ -46,6 +50,9 @@ app.include_router(teams.router, prefix="/api")
 app.include_router(workouts.router, prefix="/api")
 app.include_router(exercises.router, prefix="/api")
 app.include_router(workout_exercises.router, prefix="/api")
+app.include_router(workout_executions.router, prefix="/api")
+app.include_router(performance.router, prefix="/api")
+app.include_router(goals.router, prefix="/api")
 
 frontend_dir = Path(__file__).resolve().parent.parent.parent / "frontend"
 app.mount("/", StaticFiles(directory=str(frontend_dir), html=True), name="frontend")

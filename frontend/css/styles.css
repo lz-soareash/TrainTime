@@ -2038,6 +2038,128 @@ input[type="time"].form-input {
 }
 
 /* ============================================================
+   GOALS
+   ============================================================ */
+
+.goals-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.go-filter--active {
+  background: var(--accent-blue-soft) !important;
+  color: var(--accent-blue-2) !important;
+  border-color: var(--accent-blue) !important;
+}
+
+#goals-grid {
+  gap: 16px;
+}
+
+.goal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.goal-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-blue);
+  box-shadow: 0 6px 20px rgba(22, 131, 255, 0.08);
+}
+
+.goal-card-top {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.goal-card-track {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.goal-card-track strong {
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--text-primary);
+}
+
+.goal-status {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.goal-card-metric {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.goal-athlete-name {
+  font-size: 12px;
+  color: var(--accent-purple);
+  font-weight: 600;
+}
+
+.goal-card-deadline {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.goal-card-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.goal-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.goal-progress-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.goal-progress-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.goal-progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+@media (min-width: 600px) {
+  #goals-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  #goals-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ============================================================
    RESPONSIVE
    ============================================================ */
 

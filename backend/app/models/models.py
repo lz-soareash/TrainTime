@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean, Float
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean, Float, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 
@@ -66,6 +66,9 @@ class Athlete(Base):
     position = relationship("Position")
     teams = relationship("Team", secondary="team_athletes", back_populates="athletes")
     attributes = relationship("AthleteAttribute", back_populates="athlete")
+    executions = relationship("WorkoutExecution", back_populates="athlete")
+    goals = relationship("Goal", back_populates="athlete")
+    performance_records = relationship("PerformanceRecord", back_populates="athlete")
 
 
 class Coach(Base):
@@ -141,6 +144,7 @@ class Workout(Base):
 
     team = relationship("Team", back_populates="workouts")
     exercises = relationship("WorkoutExercise", back_populates="workout", order_by="WorkoutExercise.order")
+    executions = relationship("WorkoutExecution", back_populates="workout")
 
 
 class Exercise(Base):
@@ -178,3 +182,85 @@ class WorkoutExercise(Base):
 
     workout = relationship("Workout", back_populates="exercises")
     exercise = relationship("Exercise", back_populates="workout_exercises")
+    execution_results = relationship("WorkoutExerciseExecution", back_populates="workout_exercise")
+
+
+class WorkoutExecution(Base):
+    __tablename__ = "workout_executions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    workout_id = Column(Integer, ForeignKey("workouts.id"), nullable=False)
+    athlete_id = Column(Integer, ForeignKey("athletes.id"), nullable=False)
+    started_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    finished_at = Column(DateTime, nullable=True)
+    status = Column(String(20), nullable=False, default="in_progress")
+    notes = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    workout = relationship("Workout", back_populates="executions")
+    athlete = relationship("Athlete", back_populates="executions")
+    exercise_results = relationship("WorkoutExerciseExecution", back_populates="execution")
+    performance_records = relationship("PerformanceRecord", back_populates="execution")
+
+
+class WorkoutExerciseExecution(Base):
+    __tablename__ = "workout_exercise_executions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    execution_id = Column(Integer, ForeignKey("workout_executions.id"), nullable=False)
+    workout_exercise_id = Column(Integer, ForeignKey("workout_exercises.id"), nullable=False)
+    status = Column(String(20), nullable=False, default="pending")
+    actual_sets = Column(Integer, nullable=True)
+    actual_repetitions = Column(Integer, nullable=True)
+    actual_duration_seconds = Column(Integer, nullable=True)
+    actual_distance_meters = Column(Float, nullable=True)
+    actual_weight_kg = Column(Float, nullable=True)
+    notes = Column(String(500), nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    execution = relationship("WorkoutExecution", back_populates="exercise_results")
+    workout_exercise = relationship("WorkoutExercise", back_populates="execution_results")
+
+
+class PerformanceRecord(Base):
+    __tablename__ = "performance_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    athlete_id = Column(Integer, ForeignKey("athletes.id"), nullable=False)
+    execution_id = Column(Integer, ForeignKey("workout_executions.id"), nullable=True)
+    metric = Column(String(50), nullable=False)
+    value = Column(Float, nullable=False)
+    recorded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    notes = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    athlete = relationship("Athlete", back_populates="performance_records")
+    execution = relationship("WorkoutExecution", back_populates="performance_records")
+
+
+class Goal(Base):
+    __tablename__ = "goals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    athlete_id = Column(Integer, ForeignKey("athletes.id"), nullable=False)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String(255), nullable=False)
+    description = Column(String(500), nullable=True)
+    metric = Column(String(100), nullable=False)
+    target_value = Column(Float, nullable=False)
+    current_value = Column(Float, nullable=False, default=0)
+    unit = Column(String(50), nullable=False)
+    deadline = Column(DateTime, nullable=False)
+    status = Column(String(20), nullable=False, default="active")
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    athlete = relationship("Athlete", back_populates="goals")
+    creator = relationship("User")
