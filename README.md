@@ -52,7 +52,7 @@ pytest tests/ -v
 
 ## Fase Atual
 
-**FASE 8** - Metas (Goals) e Acompanhamento de Progresso
+**FASE 9** - Execucao de Treinos e Acompanhamento de Desempenho (frontend)
 
 ### Implementado
 
@@ -97,13 +97,32 @@ pytest tests/ -v
   - Cancelar meta
   - `progress_percentage` e `athlete_name` calculados na resposta
   - Pagina de metas no frontend (cards, barra de progresso, formulario de criacao com selecao de atleta para treinador)
-- 167 testes automatizados (13 somente metas)
-- Frontend mobile-first com gerenciamento de perfis, atributos, exercicios, treinos e metas
+- **Execucao de treinos (atleta):**
+  - Iniciar execucao de um treino agendado (uma por vez, bloqueia duplicidade)
+  - Registrar resultado por exercicio (series, reps, peso, duracao, distancia)
+  - Marcar exercicio como feito ou pulado
+  - Concluir ou cancelar a execucao
+  - Pagina de execucao no frontend com planejado x realizado por exercicio
+- **Desempenho (Performance):**
+  - Atleta registra metricas manualmente (peso, altura, circunferencia, etc.)
+  - Historico pessoal em `GET /performance/records`
+  - Visao agregada em `GET /performance` (atleta: proprios dados; treinador: apenas atletas das suas equipes)
+  - Registro automatico de metricas `volume` ao concluir uma execucao
+  - Pagina de desempenho no frontend com filtros por metrica
+  - Card "Performance" e item de menu "Desempenho" liberados
+- **Correcoes de bugs criticos encontrados em testes de integracao da Fase 9:**
+  - `GET /performance` retornava **500** para atleta (faltava `athlete_name` no schema)
+  - **Vazamento de dados:** treinador via desempenho de atletas de outros treinadores (ausencia de filtro por equipe)
+  - **Perda de dados:** registros manuais (`execution_id` nulo) sumiam da visao do treinador (inner join)
+  - **Duplicacao:** salvar o mesmo exercicio varias vezes criava varias linhas (agora faz upsert por `(execution_id, workout_exercise_id)`)
+- 177 testes automatizados (13 de performance, 14 de execucoes, 10 de regressao dos bugs acima)
+- Frontend mobile-first com gerenciamento de perfis, atributos, exercicios, treinos, execucoes, metas e desempenho
 
 ### PLANEJADO (Fases futuras)
 
-- Execucao de treinos
-- Acompanhamento de desempenho
+- Execucao de treinos: calculo de volume usando valores **realizados** (hoje usa os planejados)
+- Execucao de treinos: validar `workout_id` da URL contra a execucao
+- Execucao de treinos: previsao de carga e comparacao entre execucoes
 - Avaliacoes de treinadores
 - Integracao com IA (modulo opcional)
 - Suporte a mais esportes

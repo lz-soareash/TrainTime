@@ -91,6 +91,53 @@ Workout → WorkoutExercise → Exercise
 - Mesmo exercicio pode aparecer varias vezes no mesmo treino
 - Autorizacao: coach proprietario do treino ou atleta da equipe
 
+## Metas (Goals)
+
+```
+Coach → Goal → Athlete
+Athlete → Goal (proprias)
+```
+
+- Treinador cria meta para qualquer atleta de uma de suas equipes
+- Atleta cria meta apenas para si
+- Metas sao sempre de um atributo (`attribute_id`) com `target_value`
+- `current_value` e alterado explicitamente; nao ha leitura automatica do atributo
+- Conclusao automatica quando `current_value >= target_value`
+- Cancelamento mantem o registro com status `cancelled`
+- `progress_percentage` e `athlete_name` sao computados na resposta
+
+Detalhes em [GOALS.md](GOALS.md).
+
+## Execucao de Treinos
+
+```
+Workout → WorkoutExecution → Athlete
+Workout → WorkoutExercise → WorkoutExerciseExecution (resultado)
+```
+
+- WorkoutExercise e PLANNING (o planejado); WorkoutExerciseExecution e o REALIZADO
+- O resultado e criado sob demanda no POST do exercicio, nao no inicio da execucao
+- Chave logica do resultado: `(execution_id, workout_exercise_id)`, com upsert
+- Uma execucao `in_progress` por atleta e por treino
+- Concluir gera `finished_at` e dispara a geracao automatica de performance
+- Autorizacao: dono da execucao ou treinador da equipe do treino
+
+Detalhes em [EXECUTIONS.md](EXECUTIONS.md).
+
+## Desempenho (Performance)
+
+```
+Athlete → PerformanceRecord → WorkoutExecution (opcional)
+```
+
+- Registros manuais (metric, value, notes) e automaticos (metrica `volume`)
+- `execution_id` e anulavel: um registro pode nao vir de execucao
+- `GET /performance` e agregado: atleta ve o proprio, treinador ve os atletas
+  das suas equipes (filtro por `team_athletes` + `teams.coach_id`)
+- Ambos ordenam por `recorded_at` decrescente
+
+Detalhes em [PERFORMANCE.md](PERFORMANCE.md).
+
 ## Principios
 
 - Separacao de responsabilidades
@@ -98,3 +145,4 @@ Workout → WorkoutExercise → Exercise
 - Rotas para HTTP/validacao
 - Pydantic para validacao de entrada
 - Seguranca real no backend
+- Testes de integracao contra a API real, nao apenas testes de unidade

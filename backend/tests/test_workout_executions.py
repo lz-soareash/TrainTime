@@ -253,3 +253,104 @@ def test_athlete_adds_exercise_result():
     data = resp.json()
     assert data["actual_sets"] == 3
     assert data["status"] == "done"
+
+
+# ========== REGRESSAO FASE 9 (bug 4: upsert) ==========
+
+def _setup_exercise_with_result(email_suffix):
+    workout_id, ath_token = setup_execution_happy(
+        f"coach_up_{email_suffix}@test.com", f"ath_up_{email_suffix}@test.com")
+    coach_token = login(email=f"coach_up_{email_suffix}@test.com").json()["access_token"]
+    exercise_id = create_exercise_helper(coach_token).json()["id"]
+    workout_exercise_id = add_we_helper(
+        coach_token, workout_id, exercise_id).json()["id"]
+    execution_id = client.post(f"/api/workouts/{workout_id}/executions",
+                               headers=auth_header(ath_token), json={}).json()["id"]
+    return workout_id, execution_id, workout_exercise_id, ath_token
+
+
+def _post_result(workout_id, execution_id, we_id, token, payload):
+    return client.post(
+        f"/api/workouts/{workout_id}/executions/{execution_id}/exercises/{we_id}",
+        headers=auth_header(token), json=payload)
+
+
+def _results(workout_id, execution_id, token):
+    resp = client.get(f"/api/workouts/{workout_id}/executions/{execution_id}",
+                      headers=auth_header(token))
+    return resp.json()["exercise_results"]
+
+
+def test_saving_same_exercise_twice_does_not_duplicate():
+    """Bug 4: cada POST criava uma nova linha, duplicando o resultado."""
+    workout_id, execution_id, we_id, ath_token = _setup_exercise_with_result("dup")
+    for _ in range(3):
+        resp = _post_result(workout_id, execution_id, we_id, ath_token,
+                            {"status": "done", "actual_sets": 3,
+                             "actual_repetitions": 12})
+        assert resp.status_code in (200, 201)
+    results = _results(workout_id, execution_id, ath_token)
+    assert len(results) == 1, f"duplicou: {len(results)} linhas"
+    assert results[0]["actual_sets"] == 3
+
+
+def test_resaving_updates_existing_result():
+    """Bug 4: re-salvar deve atualizar, nao acumular."""
+    workout_id, execution_id, we_id, ath_token = _setup_exercise_with_result("upd")
+    _post_result(workout_id, execution_id, we_id, ath_token,
+                 {"status": "pending", "actual_sets": 3, "actual_repetitions": 12})
+    _post_result(workout_id, execution_id, we_id, ath_token,
+                 {"status": "done", "actual_sets": 5, "actual_repetitions": 15,
+                  "actual_weight_kg": 80.0})
+    results = _results(workout_id, execution_id, ath_token)
+    assert len(results) == 1
+    row = results[0]
+    assert row["status"] == "done"
+    assert row["actual_sets"] == 5
+    assert row["actual_repetitions"] == 15
+    assert row["actual_weight_kg"] == 80.0
+
+
+def test_result_id_is_stable_across_saves():
+    """Bug 4: o id do resultado nao deve mudar ao re-salvar."""
+    workout_id, execution_id, we_id, ath_token = _setup_exercise_with_result("id")
+    first = _post_result(workout_id, execution_id, we_id, ath_token,
+                         {"status": "done", "actual_sets": 3}).json()
+    second = _post_result(workout_id, execution_id, we_id, ath_token,
+                          {"status": "done", "actual_sets": 4}).json()
+    assert first["id"] == second["id"]
+
+
+def test_skipping_after_done_marks_row_skipped():
+    """Bug 4: pular depois de feito deve reaproveitar a mesma linha."""
+    workout_id, execution_id, we_id, ath_token = _setup_exercise_with_result("skip")
+    _post_result(workout_id, execution_id, we_id, ath_token,
+                 {"status": "done", "actual_sets": 3})
+    _post_result(workout_id, execution_id, we_id, ath_token, {"status": "skipped"})
+    results = _results(workout_id, execution_id, ath_token)
+    assert len(results) == 1
+    assert results[0]["status"] == "skipped"
+
+
+def test_distinct_exercises_keep_separate_results():
+    """Bug 4: exercicios diferentes nao podem ser confundidos no upsert."""
+    workout_id, ath_token = setup_execution_happy(
+        "coach_up_multi@test.com", "ath_up_multi@test.com")
+    coach_token = login(email="coach_up_multi@test.com").json()["access_token"]
+    ex_a = create_exercise_helper(coach_token, "Exercicio A").json()["id"]
+    ex_b = create_exercise_helper(coach_token, "Exercicio B").json()["id"]
+    we_a = add_we_helper(coach_token, workout_id, ex_a, order=1).json()["id"]
+    we_b = add_we_helper(coach_token, workout_id, ex_b, order=2).json()["id"]
+    execution_id = client.post(f"/api/workouts/{workout_id}/executions",
+                               headers=auth_header(ath_token), json={}).json()["id"]
+    _post_result(workout_id, execution_id, we_a, ath_token,
+                 {"status": "done", "actual_sets": 3})
+    _post_result(workout_id, execution_id, we_b, ath_token,
+                 {"status": "done", "actual_sets": 5})
+    _post_result(workout_id, execution_id, we_a, ath_token,
+                 {"status": "done", "actual_sets": 4})
+    results = _results(workout_id, execution_id, ath_token)
+    assert len(results) == 2
+    by_we = {r["workout_exercise_id"]: r["actual_sets"] for r in results}
+    assert by_we[we_a] == 4
+    assert by_we[we_b] == 5

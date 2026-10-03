@@ -1,8 +1,9 @@
+from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 from datetime import datetime, timezone
 
 from app.models.models import (
-    PerformanceRecord, Athlete, User, PerformanceRecord, WorkoutExecution,
+    PerformanceRecord, Athlete, Team, TeamAthlete,
 )
 from app.schemas.performance import PerformanceAggregateResponse
 
@@ -64,17 +65,17 @@ def list_athlete_records(db: Session, athlete_user_id: int) -> list[PerformanceR
 
 def list_performance(db: Session, user_id: int, role: str,
                      athlete_id: int | None = None,
-                     metric: str | None = None) -> list[PerformanceRecord]:
-    query = db.query(PerformanceRecord).options(
-        joinedload(PerformanceRecord.athlete).joinedload(Athlete.user),
-        joinedload(PerformanceRecord.execution),
-    )
+                     metric: str | None = None) -> list[PerformanceAggregateResponse]:
+    query = db.query(PerformanceRecord)
 
     if role == "coach":
         coach_id = get_coach_id_or_raise(db, user_id)
-        query = query.join(PerformanceRecord.execution).join(
-            WorkoutExecution.workout,
+        coach_athlete_ids = (
+            select(TeamAthlete.athlete_id)
+            .join(Team, Team.id == TeamAthlete.team_id)
+            .where(Team.coach_id == coach_id)
         )
+        query = query.filter(PerformanceRecord.athlete_id.in_(coach_athlete_ids))
     elif role == "athlete":
         athlete = get_athlete_or_raise(db, user_id)
         query = query.filter(PerformanceRecord.athlete_id == athlete.id)
@@ -88,18 +89,19 @@ def list_performance(db: Session, user_id: int, role: str,
     if metric is not None:
         query = query.filter(PerformanceRecord.metric == metric)
 
-    records = query.order_by(PerformanceRecord.recorded_at.desc()).all()
-    if role == "coach":
-        return [
-            PerformanceAggregateResponse(
-                id=r.id,
-                athlete_id=r.athlete_id,
-                athlete_name=r.athlete.user.name if r.athlete and r.athlete.user else "Atleta",
-                metric=r.metric,
-                value=r.value,
-                recorded_at=r.recorded_at,
-                notes=r.notes,
-            )
-            for r in records
-        ]
-    return records
+    records = query.options(
+        joinedload(PerformanceRecord.athlete).joinedload(Athlete.user),
+    ).order_by(PerformanceRecord.recorded_at.desc()).all()
+
+    return [
+        PerformanceAggregateResponse(
+            id=r.id,
+            athlete_id=r.athlete_id,
+            athlete_name=r.athlete.user.name if r.athlete and r.athlete.user else "Atleta",
+            metric=r.metric,
+            value=r.value,
+            recorded_at=r.recorded_at,
+            notes=r.notes,
+        )
+        for r in records
+    ]

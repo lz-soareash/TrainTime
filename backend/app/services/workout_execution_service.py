@@ -169,18 +169,29 @@ def add_exercise_result(db: Session, execution_id: int, athlete_id: int,
     if not we:
         raise LookupError("Exercicio do treino nao encontrado")
 
-    result = WorkoutExerciseExecution(
-        execution_id=execution_id,
-        workout_exercise_id=workout_exercise_id,
-        status=status,
-        actual_sets=actual_sets,
-        actual_repetitions=actual_repetitions,
-        actual_duration_seconds=actual_duration_seconds,
-        actual_distance_meters=actual_distance_meters,
-        actual_weight_kg=actual_weight_kg,
-        notes=notes,
+    result = db.query(WorkoutExerciseExecution).filter(
+        WorkoutExerciseExecution.execution_id == execution_id,
+        WorkoutExerciseExecution.workout_exercise_id == workout_exercise_id,
+    ).first()
+
+    if result is None:
+        result = WorkoutExerciseExecution(
+            execution_id=execution_id,
+            workout_exercise_id=workout_exercise_id,
+        )
+        db.add(result)
+
+    result.status = status
+    result.actual_sets = actual_sets
+    result.actual_repetitions = actual_repetitions
+    result.actual_duration_seconds = actual_duration_seconds
+    result.actual_distance_meters = actual_distance_meters
+    result.actual_weight_kg = actual_weight_kg
+    result.notes = notes
+    result.completed_at = (
+        datetime.now(timezone.utc) if status == "done" else None
     )
-    db.add(result)
+
     db.commit()
     db.refresh(result)
     return result

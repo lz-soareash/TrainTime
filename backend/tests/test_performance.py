@@ -196,3 +196,105 @@ def test_athlete_cannot_list_coach_aggregate():
     # atleta nao ve agregado por treinador diretamente
     assert resp.status_code == 200
     assert all(r.get("athlete_name") for r in resp.json())
+
+
+# ========== REGRESSAO FASE 9 (bugs 1, 2 e 3) ==========
+
+def test_athlete_aggregate_returns_200_with_records():
+    """Bug 1: rota devolvia ORM cru sem athlete_name -> 500 na tela do atleta."""
+    workout_id, ath_token = setup_perf_happy("coach_bug1@test.com",
+                                             "ath_bug1@test.com")
+    client.post("/api/performance", headers=auth_header(ath_token), json={
+        "metric": "velocidade", "value": 11.0,
+    })
+    resp = client.get("/api/performance", headers=auth_header(ath_token))
+    assert resp.status_code == 200
+    records = resp.json()
+    assert len(records) == 1
+    assert records[0]["metric"] == "velocidade"
+    assert records[0]["value"] == 11.0
+    assert records[0]["athlete_name"] == "Atleta Perf"
+
+
+def test_athlete_aggregate_with_execution_record_returns_200():
+    """Bug 1 tambem afetava registros ligados a uma execucao."""
+    workout_id, ath_token = setup_perf_happy("coach_bug1b@test.com",
+                                             "ath_bug1b@test.com")
+    start_resp = client.post(f"/api/workouts/{workout_id}/executions",
+                             headers=auth_header(ath_token), json={})
+    execution_id = start_resp.json()["id"]
+    client.post("/api/performance", headers=auth_header(ath_token), json={
+        "execution_id": execution_id, "metric": "distancia", "value": 4.0,
+    })
+    resp = client.get("/api/performance", headers=auth_header(ath_token))
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+    assert resp.json()[0]["athlete_name"] == "Atleta Perf"
+
+
+def test_coach_sees_only_own_athletes_performance():
+    """Bug 2: consulta do treinador nao filtrava por equipe -> vazamento."""
+    coach_a = "coach_iso_a@test.com"
+    coach_b = "coach_iso_b@test.com"
+    ath_a = "ath_iso_a@test.com"
+    ath_b = "ath_iso_b@test.com"
+
+    # Treinador A com atleta A na equipe A
+    setup_perf_happy(coach_a, ath_a)
+    # Treinador B com atleta B na equipe B
+    setup_perf_happy(coach_b, ath_b)
+
+    token_a = login(email=ath_a).json()["access_token"]
+    token_b = login(email=ath_b).json()["access_token"]
+    client.post("/api/performance", headers=auth_header(token_a),
+                json={"metric": "velocidade", "value": 10.0})
+    client.post("/api/performance", headers=auth_header(token_b),
+                json={"metric": "velocidade", "value": 20.0})
+
+    coach_a_token = login(email=coach_a).json()["access_token"]
+    resp_a = client.get("/api/performance", headers=auth_header(coach_a_token))
+    assert resp_a.status_code == 200
+    values_a = {r["value"] for r in resp_a.json()}
+    assert values_a == {10.0}, f"vazamento: treinador A viu {values_a}"
+
+    coach_b_token = login(email=coach_b).json()["access_token"]
+    resp_b = client.get("/api/performance", headers=auth_header(coach_b_token))
+    values_b = {r["value"] for r in resp_b.json()}
+    assert values_b == {20.0}, f"vazamento: treinador B viu {values_b}"
+
+
+def test_coach_sees_manual_record_without_execution():
+    """Bug 3: inner join em PerformanceRecord.execution descartava registros
+    manuais (execution_id nulo)."""
+    workout_id, ath_token = setup_perf_happy("coach_bug3@test.com",
+                                             "ath_bug3@test.com")
+    client.post("/api/performance", headers=auth_header(ath_token), json={
+        "metric": "peso_corporal", "value": 72.5,
+    })
+    login_resp = login(email="coach_bug3@test.com")
+    coach_token = login_resp.json()["access_token"]
+    resp = client.get("/api/performance", headers=auth_header(coach_token))
+    assert resp.status_code == 200
+    records = resp.json()
+    assert len(records) == 1, "registro manual sumiu da visao do treinador"
+    assert records[0]["metric"] == "peso_corporal"
+    assert records[0]["value"] == 72.5
+
+
+def test_coach_sees_both_manual_and_execution_records():
+    """Bug 3: registros com e sem execucao devem coexistir."""
+    workout_id, ath_token = setup_perf_happy("coach_bug3b@test.com",
+                                             "ath_bug3b@test.com")
+    start_resp = client.post(f"/api/workouts/{workout_id}/executions",
+                             headers=auth_header(ath_token), json={})
+    execution_id = start_resp.json()["id"]
+    client.post("/api/performance", headers=auth_header(ath_token), json={
+        "metric": "manual", "value": 1.0,
+    })
+    client.post("/api/performance", headers=auth_header(ath_token), json={
+        "execution_id": execution_id, "metric": "com_execucao", "value": 2.0,
+    })
+    coach_token = login(email="coach_bug3b@test.com").json()["access_token"]
+    resp = client.get("/api/performance", headers=auth_header(coach_token))
+    metrics = {r["metric"] for r in resp.json()}
+    assert metrics == {"manual", "com_execucao"}
