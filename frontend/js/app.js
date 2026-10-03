@@ -565,41 +565,59 @@ function renderTeamsEmpty(isAthlete) {
         '<button class="btn btn-primary btn-sm" onclick="showCreateTeam()">+ Criar equipe</button>');
 }
 
+function sidebarItemRow({ icon, label, value, action, ariaLabel }) {
+  const esc = (s) => String(s).replace(/"/g, '&quot;');
+  return `
+    <button type="button" class="sidebar-item sidebar-item--link" onclick="${action}" aria-label="${esc(ariaLabel || label)}">
+      ${icon ? `<span class="sidebar-item-icon" aria-hidden="true">${icon}</span>` : ''}
+      <span class="sidebar-item-label">${label}</span>
+      ${value ? `<b>${value}</b>` : ''}
+      <span class="sidebar-item-arrow" aria-hidden="true">→</span>
+    </button>
+  `;
+}
+
 function renderSidebar(isAthlete, profile, attributes) {
   const block = document.getElementById('sidebar-block');
-  block.innerHTML = '';
+  if (!block) return;
+  const rows = [];
   if (isAthlete) {
-    const sport = profile.sport ? `${profile.sport.icon || '🏐'} ${profile.sport.name}` : 'Não definido';
-    const position = profile.position ? profile.position.name : 'Não definido';
-    block.innerHTML += `
-      <div class="sidebar-item"><span class="sidebar-item-icon" aria-hidden="true">${profile.sport ? (profile.sport.icon || '🏐') : '🏐'}</span><span>${profile.sport ? profile.sport.name : 'Esporte'}</span><span class="sidebar-item-arrow">→</span></div>
-      <div class="sidebar-item"><span class="sidebar-item-icon" aria-hidden="true">🎯</span><span>${position}</span><span class="sidebar-item-arrow">→</span></div>
-    `;
-    const list = attributes.slice(0, 4);
-    list.forEach(a => {
-      block.innerHTML += `
-        <div class="sidebar-item">
-          <span>${a.attribute_name}</span>
-          <b style="color:var(--accent-blue-2)">${a.value}</b>
-        </div>
-      `;
+    rows.push(sidebarItemRow({
+      icon: profile.sport ? (profile.sport.icon || '🏐') : '🏐',
+      label: profile.sport ? profile.sport.name : 'Definir esporte',
+      action: 'showProfileEdit()',
+      ariaLabel: 'Editar esporte',
+    }));
+    rows.push(sidebarItemRow({
+      icon: '🎯',
+      label: profile.position ? profile.position.name : 'Definir posição',
+      action: 'showProfileEdit()',
+      ariaLabel: 'Editar posição',
+    }));
+    attributes.slice(0, 4).forEach(a => {
+      rows.push(sidebarItemRow({
+        label: a.attribute_name,
+        value: a.value,
+        action: 'showAttributesEdit()',
+        ariaLabel: `Editar atributos: ${a.attribute_name}`,
+      }));
     });
   } else {
     const sports = profile.sports || [];
     if (sports.length === 0) {
-      block.innerHTML = '<p class="empty-text">Nenhum esporte selecionado.</p>';
+      rows.push('<p class="empty-text">Nenhum esporte selecionado.</p>');
     } else {
       sports.forEach(s => {
-        block.innerHTML += `
-          <div class="sidebar-item">
-            <span class="sidebar-item-icon" aria-hidden="true">${s.icon || '🏅'}</span>
-            <span>${s.name}</span>
-            <span class="sidebar-item-arrow">→</span>
-          </div>
-        `;
+        rows.push(sidebarItemRow({
+          icon: s.icon || '🏅',
+          label: s.name,
+          action: 'showProfileEdit()',
+          ariaLabel: `Editar esportes que treino: ${s.name}`,
+        }));
       });
     }
   }
+  block.innerHTML = rows.join('');
 
   document.getElementById('sidebar-actions').innerHTML = `
     <button class="btn btn-secondary btn-sm" onclick="showProfileEdit()">Editar perfil</button>
