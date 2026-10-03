@@ -59,6 +59,54 @@ async function apiDelete(path) {
   return res.status === 204 ? null : res.json();
 }
 
+const PAGE_TITLES = {
+  'page-dashboard': 'Painel',
+  'page-athlete-workouts': 'Meus Treinos',
+  'page-athlete-workout-detail': 'Meus Treinos',
+  'page-goals': 'Metas',
+  'page-performance': 'Desempenho',
+  'page-execution': 'Execução do Treino',
+  'page-team-detail': 'Equipe',
+  'page-team-workouts': 'Treinos da Equipe',
+  'page-workout-detail': 'Treino',
+  'page-create-workout': 'Novo Treino',
+  'page-edit-workout': 'Editar Treino',
+  'page-create-exercise': 'Novo Exercício',
+  'page-add-workout-exercise': 'Adicionar Exercício',
+  'page-configure-exercise': 'Configurar Exercício',
+  'page-edit-workout-exercise': 'Editar Exercício do Treino',
+  'page-create-team': 'Criar Equipe',
+  'page-edit-team': 'Editar Equipe',
+  'page-add-athlete': 'Adicionar Atleta',
+  'page-profile-edit': 'Editar Perfil',
+  'page-attributes-edit': 'Meus Atributos',
+  'page-exercise-library': 'Biblioteca de Exercícios',
+};
+
+const PAGE_NAV = {
+  'page-dashboard': 'page-dashboard',
+  'page-team-detail': 'page-dashboard',
+  'page-team-workouts': 'page-dashboard',
+  'page-workout-detail': 'page-dashboard',
+  'page-create-workout': 'page-dashboard',
+  'page-edit-workout': 'page-dashboard',
+  'page-create-exercise': 'page-dashboard',
+  'page-add-workout-exercise': 'page-dashboard',
+  'page-configure-exercise': 'page-dashboard',
+  'page-edit-workout-exercise': 'page-dashboard',
+  'page-create-team': 'page-dashboard',
+  'page-edit-team': 'page-dashboard',
+  'page-add-athlete': 'page-dashboard',
+  'page-athlete-workouts': 'page-athlete-workouts',
+  'page-athlete-workout-detail': 'page-athlete-workouts',
+  'page-execution': 'page-athlete-workouts',
+  'page-goals': 'page-goals',
+  'page-performance': 'page-performance',
+  'page-profile-edit': 'page-profile-edit',
+  'page-attributes-edit': 'page-attributes-edit',
+  'page-exercise-library': 'page-exercise-library',
+};
+
 function showPage(pageId) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const target = document.getElementById(pageId);
@@ -67,6 +115,56 @@ function showPage(pageId) {
   const isAuth = target.classList.contains('page--auth');
   document.body.classList.toggle('app-shell', !isAuth);
   header.hidden = isAuth;
+  const title = document.getElementById('topbar-title');
+  if (title) title.textContent = PAGE_TITLES[pageId] || 'TrainTime';
+  const navKey = PAGE_NAV[pageId] || pageId;
+  document.querySelectorAll('[data-nav]').forEach(item => {
+    const on = item.dataset.nav === navKey;
+    item.classList.toggle('is-active', on);
+    if (on) item.setAttribute('aria-current', 'page');
+    else item.removeAttribute('aria-current');
+  });
+  if (!isAuth) closeSidebar();
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+function toggleSidebar() {
+  const open = !document.body.classList.contains('nav-open');
+  document.body.classList.toggle('nav-open', open);
+  const scrim = document.getElementById('sidebar-scrim');
+  if (scrim) scrim.hidden = !open;
+  const btn = document.getElementById('btn-nav-toggle');
+  if (btn) btn.setAttribute('aria-expanded', String(open));
+}
+
+function closeSidebar() {
+  if (!document.body.classList.contains('nav-open')) return;
+  document.body.classList.remove('nav-open');
+  const scrim = document.getElementById('sidebar-scrim');
+  if (scrim) scrim.hidden = true;
+  const btn = document.getElementById('btn-nav-toggle');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+}
+
+function navQuick(target) {
+  if (target === 'workouts') {
+    if (currentUserRole === 'coach') {
+      showPage('page-dashboard');
+      scrollToSection('dash-teams-section');
+      return;
+    }
+    openAthleteWorkoutsPage();
+    return;
+  }
+  if (target === 'goals') {
+    openGoalsPage();
+    return;
+  }
+  if (target === 'performance') {
+    openPerformancePage();
+    return;
+  }
+  loadDashboard();
 }
 
 function initials(name) {
@@ -118,7 +216,8 @@ function toggleUserMenu(event) {
 }
 
 function closeUserMenu(event) {
-  if (event && event.target instanceof Element && event.target.closest('.user-menu')) return;
+  const target = event && event.target instanceof Element ? event.target : null;
+  if (target && target.closest('#btn-user-menu')) return;
   const menu = document.getElementById('user-dropdown');
   const btn = document.getElementById('btn-user-menu');
   if (!menu.hidden) {
@@ -127,6 +226,13 @@ function closeUserMenu(event) {
   }
 }
 document.addEventListener('click', closeUserMenu);
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    closeUserMenu();
+    closeSidebar();
+  }
+});
 
 function showError(elementId, message) {
   const el = document.getElementById(elementId);
@@ -293,6 +399,9 @@ async function loadDashboard() {
 
     document.getElementById('menu-attributes').style.display = user.role === 'athlete' ? 'flex' : 'none';
     document.getElementById('menu-exercises').style.display = user.role === 'coach' ? 'flex' : 'none';
+    document.getElementById('menu-performance').style.display = 'flex';
+    document.getElementById('nav-attributes').style.display = user.role === 'athlete' ? 'flex' : 'none';
+    document.getElementById('nav-exercises').style.display = user.role === 'coach' ? 'flex' : 'none';
 
     document.getElementById('sidebar-name').textContent = user.name;
     document.getElementById('sidebar-avatar').textContent = initials(user.name);
@@ -366,8 +475,25 @@ async function loadDashboard() {
 
     showPage('page-dashboard');
   } catch (err) {
-    clearToken();
-    showPage('page-home');
+    // Os helpers api* ja tratam 401 limpando o token. Aqui nao deve
+    // deslogar o usuario por um erro de rede ou de renderizacao.
+    if (!getToken()) {
+      showPage('page-home');
+      return;
+    }
+    const teamsLoading = document.getElementById('dash-teams-loading');
+    const teamsError = document.getElementById('dash-teams-error');
+    if (teamsLoading) teamsLoading.innerHTML = '';
+    if (teamsError) {
+      teamsError.innerHTML = `
+        <span class="error-icon" aria-hidden="true">⚠️</span>
+        <strong>Não foi possível carregar seus dados.</strong>
+        <p>${err.message}</p>
+        <button class="btn btn-secondary btn-sm" onclick="loadDashboard()">Tentar novamente</button>
+      `;
+      teamsError.hidden = false;
+    }
+    showPage('page-dashboard');
   }
 }
 
@@ -503,11 +629,17 @@ function renderMainCards(isAthlete, teamCount, scheduledCount, totalWorkouts) {
         <p class="main-card-desc">Visualize as equipes que você participa.</p>
         ${teamsBtn}
       </div>
-      <div class="main-card main-card--locked">
+      <div class="main-card">
         <span class="main-card-icon" aria-hidden="true">📈</span>
         <h3 class="main-card-title">Meu Progresso</h3>
         <p class="main-card-desc">Acompanhe sua evolução nos treinos e atributos.</p>
-        <span class="badge-coming">🔒 Em breve</span>
+        <button class="btn btn-primary btn-sm" onclick="openGoalsPage()">Ver metas →</button>
+      </div>
+      <div class="main-card">
+        <span class="main-card-icon" aria-hidden="true">📊</span>
+        <h3 class="main-card-title">Performance</h3>
+        <p class="main-card-desc">Registre e acompanhe seus números de desempenho.</p>
+        <button class="btn btn-primary btn-sm" onclick="openPerformancePage()">Ver desempenho →</button>
       </div>
     `;
   } else {
@@ -526,11 +658,17 @@ function renderMainCards(isAthlete, teamCount, scheduledCount, totalWorkouts) {
         <p class="main-card-desc">Crie e gerencie seus treinos de forma simples e organizada.</p>
         <button class="btn btn-primary btn-sm" onclick="scrollToSection('dash-teams-section')">Ver treinos →</button>
       </div>
-      <div class="main-card main-card--locked">
+      <div class="main-card">
         <span class="main-card-icon" aria-hidden="true">📊</span>
         <h3 class="main-card-title">Performance</h3>
         <p class="main-card-desc">Acompanhe a evolução dos seus atletas.</p>
-        <span class="badge-coming">🔒 Em breve</span>
+        <button class="btn btn-primary btn-sm" onclick="openPerformancePage()">Ver desempenho →</button>
+      </div>
+      <div class="main-card">
+        <span class="main-card-icon" aria-hidden="true">📈</span>
+        <h3 class="main-card-title">Metas dos Atletas</h3>
+        <p class="main-card-desc">Acompanhe as metas e o progresso da equipe.</p>
+        <button class="btn btn-primary btn-sm" onclick="openGoalsPage()">Ver metas →</button>
       </div>
     `;
   }
@@ -556,8 +694,8 @@ function renderPhases() {
 }
 
 async function openAthleteWorkoutsPage() {
-  await loadAthleteWorkouts();
   showPage('page-athlete-workouts');
+  await loadAthleteWorkouts();
 }
 
 function showCreateTeam() {
@@ -931,6 +1069,8 @@ async function openAthleteWorkout(workoutId) {
     document.getElementById('ath-workout-detail-time').textContent = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     document.getElementById('ath-workout-detail-duration').textContent = workout.duration_minutes ? `${workout.duration_minutes} minutos` : '-';
 
+    document.getElementById('ath-workout-start-row').style.display = workout.status === 'scheduled' ? 'flex' : 'none';
+
     loadWorkoutExercisesForAthlete(workoutId);
     showPage('page-athlete-workout-detail');
   } catch (err) {
@@ -1208,6 +1348,9 @@ async function showProfileEdit() {
   document.getElementById('profile-edit-position-group').style.display = isAthlete ? 'block' : 'none';
   document.getElementById('profile-edit-sports-group').style.display = isAthlete ? 'none' : 'block';
   document.getElementById('profile-edit-name').value = document.getElementById('sidebar-name').textContent;
+  // Navega antes das chamadas: se a API falhar, o usuario ainda ve a pagina
+  // e a mensagem de erro, em vez de nada acontecer.
+  showPage('page-profile-edit');
   try {
     const sports = currentSports.length ? currentSports : await apiGet('/sports');
     if (isAthlete) {
@@ -1227,7 +1370,6 @@ async function showProfileEdit() {
         </div>
       `).join('');
     }
-    showPage('page-profile-edit');
   } catch (err) {
     showError('profile-edit-error', err.message);
   }
@@ -1313,6 +1455,9 @@ async function showAttributesEdit() {
   loading.innerHTML = skeletonCards(3);
   errBox.style.display = 'none';
   document.getElementById('attributes-form-wrap').style.display = 'none';
+  // Navega antes das chamadas: garante que o usuario veja a pagina mesmo se
+  // a API falhar ou se o atleta ainda nao tiver esporte definido.
+  showPage('page-attributes-edit');
   try {
     const profile = await apiGet('/athletes/me');
     if (!profile.sport) {
@@ -1404,6 +1549,8 @@ function showLibraryFeedback(message) {
 async function openExerciseLibrary() {
   hideLibraryFeedback();
   hideError('lib-exercise-form-error');
+  // Navega antes das chamadas para nao ficar sem resposta em caso de erro.
+  showPage('page-exercise-library');
   try {
     const profile = await apiGet('/coaches/me');
     currentCoachId = profile.id;
@@ -1549,8 +1696,8 @@ async function openGoalsPage() {
   roleEl.textContent = isCoach ? 'METAS · TREINADOR' : 'METAS';
   athleteGroup.style.display = isCoach ? 'block' : 'none';
   document.getElementById('goal-athlete').required = isCoach;
-  if (isCoach) await populateGoalAthletes();
   showPage('page-goals');
+  if (isCoach) await populateGoalAthletes();
   await loadGoals();
 }
 
@@ -1751,6 +1898,322 @@ async function handleCancelGoal(goalId) {
     await loadGoals();
   } catch (err) {
     alert(`Não foi possível cancelar: ${err.message}`);
+  }
+}
+
+/* ============================================================
+   WORKOUT EXECUTION (Fase 9)
+   ============================================================ */
+
+let currentExecutionId = null;
+let currentExecutionWorkoutId = null;
+
+function showExecutionError(message) {
+  const el = document.getElementById('execution-error');
+  el.hidden = false;
+  el.innerHTML = `<span class="error-icon" aria-hidden="true">⚠️</span><p>${message}</p>`;
+}
+
+function hideExecutionError() {
+  const el = document.getElementById('execution-error');
+  el.hidden = true;
+  el.innerHTML = '';
+}
+
+function plannedLabel(we) {
+  const parts = [];
+  if (we.sets) parts.push(`${we.sets} séries`);
+  if (we.repetitions) parts.push(`${we.repetitions} reps`);
+  if (we.duration_seconds) parts.push(`${we.duration_seconds}s`);
+  if (we.distance_meters) parts.push(`${we.distance_meters}m`);
+  return parts.length ? parts.join(' · ') : 'sem meta planejada';
+}
+
+function actualLabel(r) {
+  const parts = [];
+  if (r.actual_sets != null) parts.push(`${r.actual_sets} séries`);
+  if (r.actual_repetitions != null) parts.push(`${r.actual_repetitions} reps`);
+  if (r.actual_duration_seconds != null) parts.push(`${r.actual_duration_seconds}s`);
+  if (r.actual_distance_meters != null) parts.push(`${r.actual_distance_meters}m`);
+  if (r.actual_weight_kg != null) parts.push(`${r.actual_weight_kg}kg`);
+  return parts.length ? parts.join(' · ') : 'sem registro';
+}
+
+async function startExecution(workoutId, btn) {
+  hideExecutionError();
+  if (btn) btn.disabled = true;
+  try {
+    const execution = await apiPost(`/workouts/${workoutId}/executions`, {});
+    currentExecutionWorkoutId = workoutId;
+    await openExecution(execution.id, workoutId);
+  } catch (err) {
+    showExecutionError(`Não foi possível iniciar o treino. ${err.message}`);
+    showPage('page-execution');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function openExecution(executionId, workoutId) {
+  hideExecutionError();
+  currentExecutionId = executionId;
+  currentExecutionWorkoutId = workoutId;
+  const list = document.getElementById('execution-exercises');
+  const empty = document.getElementById('execution-empty');
+  showPage('page-execution');
+  list.innerHTML = '';
+  try {
+    const [execution, exercises, workout] = await Promise.all([
+      apiGet(`/workouts/${workoutId}/executions/${executionId}`),
+      apiGet(`/workouts/${workoutId}/exercises`),
+      apiGet(`/workouts/${workoutId}`),
+    ]);
+    document.getElementById('execution-title').textContent = workout.title;
+    const statusEl = document.getElementById('execution-status');
+    const finished = execution.finished_at
+      ? ` · concluído em ${new Date(execution.finished_at).toLocaleString('pt-BR')}`
+      : '';
+    statusEl.textContent = execution.status === 'completed' ? 'Concluído'
+      : execution.status === 'cancelled' ? 'Cancelado' : 'Em andamento';
+    statusEl.className = `workout-status workout-status-${execution.status}`;
+    document.getElementById('execution-meta').textContent =
+      `Iniciado em ${new Date(execution.started_at).toLocaleString('pt-BR')}${finished}`;
+
+    const actions = document.getElementById('execution-actions');
+    const finishedExecution = execution.status !== 'in_progress';
+    actions.style.display = finishedExecution ? 'none' : 'flex';
+
+    const resultsByWe = {};
+    execution.exercise_results.forEach(r => { resultsByWe[r.workout_exercise_id] = r; });
+
+    if (exercises.length === 0) {
+      list.style.display = 'none';
+      empty.style.display = 'flex';
+      empty.innerHTML = emptyStateHTML('📋', 'Treino sem exercícios', 'Peça ao treinador para adicionar exercícios a este treino.');
+      return;
+    }
+    list.style.display = 'flex';
+    empty.style.display = 'none';
+    list.innerHTML = exercises.map(we => {
+      const r = resultsByWe[we.id];
+      const status = r ? r.status : 'pending';
+      const name = we.exercise ? we.exercise.name : `Exercício ${we.id}`;
+      const done = status === 'done';
+      const skipped = status === 'skipped';
+      const canEdit = !finishedExecution;
+      return `
+        <div class="exec-item exec-item--${done ? 'done' : skipped ? 'skipped' : 'pending'}">
+          <div class="exec-item-head">
+            <div class="exec-item-info">
+              <span class="exec-item-name">${we.order + 1}. ${name}</span>
+              <span class="exec-item-plan">🎯 Planejado: ${plannedLabel(we)}</span>
+              <span class="exec-item-actual">✅ Realizado: ${r ? actualLabel(r) : 'sem registro'}</span>
+            </div>
+            <span class="exec-item-status">${done ? 'Feito' : skipped ? 'Pulado' : 'Pendente'}</span>
+          </div>
+          ${canEdit ? `
+          <div class="exec-item-form">
+            <label class="form-label" for="exec-sets-${we.id}">Séries</label>
+            <input class="form-input exec-input" type="number" min="0" id="exec-sets-${we.id}" value="${r && r.actual_sets != null ? r.actual_sets : ''}" placeholder="${we.sets != null ? we.sets : 0}">
+            <label class="form-label" for="exec-reps-${we.id}">Reps</label>
+            <input class="form-input exec-input" type="number" min="0" id="exec-reps-${we.id}" value="${r && r.actual_repetitions != null ? r.actual_repetitions : ''}" placeholder="${we.repetitions != null ? we.repetitions : 0}">
+            <label class="form-label" for="exec-weight-${we.id}">Peso (kg)</label>
+            <input class="form-input exec-input" type="number" min="0" step="0.5" id="exec-weight-${we.id}" value="${r && r.actual_weight_kg != null ? r.actual_weight_kg : ''}" placeholder="0">
+            <button class="btn btn-secondary btn-sm" onclick="saveExerciseResult(${we.id}, ${done ? 'pending' : 'done'}, this)">💾 Salvar</button>
+            <button class="btn btn-sm btn-ghost" onclick="saveExerciseResult(${we.id}, 'skipped', this)">Pular</button>
+          </div>` : ''}
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    list.innerHTML = '';
+    list.style.display = 'none';
+    empty.style.display = 'none';
+    showExecutionError(err.message);
+  }
+}
+
+async function saveExerciseResult(workoutExerciseId, status, btn) {
+  if (btn) btn.disabled = true;
+  const workoutId = currentExecutionWorkoutId;
+  const executionId = currentExecutionId;
+  const num = (id) => {
+    const v = document.getElementById(id).value;
+    return v === '' || v === null ? null : parseFloat(v);
+  };
+  const payload = { status };
+  const sets = num(`exec-sets-${workoutExerciseId}`);
+  const reps = num(`exec-reps-${workoutExerciseId}`);
+  const weight = num(`exec-weight-${workoutExerciseId}`);
+  if (sets !== null) payload.actual_sets = sets;
+  if (reps !== null) payload.actual_repetitions = reps;
+  if (weight !== null) payload.actual_weight_kg = weight;
+  hideExecutionError();
+  try {
+    await apiPost(`/workouts/${workoutId}/executions/${executionId}/exercises/${workoutExerciseId}`, payload);
+    await openExecution(executionId, workoutId);
+  } catch (err) {
+    showExecutionError(err.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function setExecutionStatus(status) {
+  const messages = {
+    completed: 'Concluir este treino? O desempenho será registrado.',
+    cancelled: 'Cancelar este treino?',
+  };
+  if (!confirm(messages[status])) return;
+  const actions = document.getElementById('execution-actions');
+  actions.style.pointerEvents = 'none';
+  try {
+    await apiPut(`/workouts/${currentExecutionWorkoutId}/executions/${currentExecutionId}`, {
+      status,
+    });
+    await openExecution(currentExecutionId, currentExecutionWorkoutId);
+  } catch (err) {
+    showExecutionError(err.message);
+  } finally {
+    actions.style.pointerEvents = '';
+  }
+}
+
+function completeExecution() {
+  return setExecutionStatus('completed');
+}
+
+function cancelExecution() {
+  return setExecutionStatus('cancelled');
+}
+
+/* ============================================================
+   PERFORMANCE (Fase 9)
+   ============================================================ */
+
+let currentMetricFilter = '';
+
+async function openPerformancePage() {
+  hideError('performance-create-error');
+  const isCoach = currentUserRole === 'coach';
+  document.getElementById('performance-role').textContent = isCoach ? 'DESEMPENHO · TREINADOR' : 'DESEMPENHO';
+  document.getElementById('performance-sub').textContent = isCoach
+    ? 'Acompanhe a evolução dos seus atletas.'
+    : 'Registre e acompanhe sua evolução ao longo do tempo.';
+  document.getElementById('btn-create-perf').style.display = isCoach ? 'none' : 'inline-flex';
+  await loadPerformance();
+  showPage('page-performance');
+}
+
+async function loadPerformance() {
+  const loading = document.getElementById('performance-loading');
+  const grid = document.getElementById('performance-grid');
+  const empty = document.getElementById('performance-empty');
+  const error = document.getElementById('performance-error');
+  loading.style.display = 'grid';
+  loading.innerHTML = skeletonCards(3);
+  grid.style.display = 'none';
+  empty.style.display = 'none';
+  error.hidden = true;
+  error.innerHTML = '';
+  document.querySelectorAll('.go-filter[data-metric]').forEach(f => {
+    f.classList.toggle('go-filter--active', f.dataset.metric === currentMetricFilter);
+  });
+  try {
+    const records = await apiGet('/performance');
+    loading.style.display = 'none';
+    if (!records || records.length === 0) {
+      empty.style.display = 'flex';
+      empty.innerHTML = currentUserRole === 'coach'
+        ? emptyStateHTML('📊', 'Nenhum dado de desempenho', 'Quando seus atletas registrarem desempenho, os dados aparecerão aqui.')
+        : emptyStateHTML('📊', 'Nenhum registro ainda', 'Registre sua primeira métrica de desempenho.',
+          '<button class="btn btn-primary btn-sm" onclick="showCreatePerformance()">+ Registrar</button>');
+      return;
+    }
+    const metrics = [...new Set(records.map(r => r.metric))].sort();
+    renderMetricFilters(metrics);
+    let filtered = records;
+    if (currentMetricFilter) {
+      filtered = filtered.filter(r => r.metric === currentMetricFilter);
+    }
+    if (filtered.length === 0) {
+      grid.style.display = 'none';
+      empty.style.display = 'flex';
+      empty.innerHTML = emptyStateHTML('🔍', 'Sem registros nesta métrica', 'Escolha outra métrica nos filtros acima.');
+      return;
+    }
+    grid.style.display = 'grid';
+    grid.innerHTML = filtered.map(renderPerformanceCard).join('');
+  } catch (err) {
+    loading.style.display = 'none';
+    error.hidden = false;
+    error.innerHTML = `<span class="error-icon" aria-hidden="true">⚠️</span><strong>Não foi possível carregar o desempenho.</strong><p>${err.message}</p><button class="btn btn-secondary btn-sm" onclick="loadPerformance()">Tentar novamente</button>`;
+  }
+}
+
+function renderMetricFilters(metrics) {
+  const container = document.getElementById('performance-filters');
+  if (!container) return;
+  const isCoach = currentUserRole === 'coach';
+  const allLabel = isCoach ? 'Todos os atletas' : 'Todas';
+  container.innerHTML = `<button class="btn btn-secondary btn-sm go-filter" data-metric="" onclick="applyMetricFilter('')">${allLabel}</button>`
+    + metrics.map(m =>
+      `<button class="btn btn-secondary btn-sm go-filter" data-metric="${m}" onclick="applyMetricFilter('${m}')">${m}</button>`).join('');
+}
+
+function renderPerformanceCard(record) {
+  const isCoach = currentUserRole === 'coach';
+  const who = isCoach && record.athlete_name ? `<span class="perf-athlete">👤 ${record.athlete_name}</span>` : '';
+  return `
+    <article class="perf-card">
+      <span class="perf-metric">${record.metric}</span>
+      <span class="perf-value">${record.value}</span>
+      ${who}
+      <span class="perf-date">📅 ${new Date(record.recorded_at).toLocaleDateString('pt-BR')}</span>
+      ${record.notes ? `<p class="perf-notes">${record.notes}</p>` : ''}
+    </article>
+  `;
+}
+
+function applyMetricFilter(metric) {
+  hideError('performance-create-error');
+  showCreatePerformance(null);
+  currentMetricFilter = metric || '';
+  loadPerformance();
+}
+
+function showCreatePerformance() {
+  hideError('performance-create-error');
+  const form = document.getElementById('performance-form');
+  const showing = form.style.display === 'block';
+  form.style.display = showing ? 'none' : 'block';
+  if (!showing) {
+    document.getElementById('perf-metric').value = '';
+    document.getElementById('perf-value').value = '';
+    document.getElementById('perf-notes').value = '';
+    form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+async function handleCreatePerformance(e) {
+  e.preventDefault();
+  hideError('performance-create-error');
+  const btn = document.getElementById('btn-create-perf-submit');
+  btn.disabled = true;
+  const notes = document.getElementById('perf-notes').value;
+  const body = {
+    metric: document.getElementById('perf-metric').value,
+    value: parseFloat(document.getElementById('perf-value').value),
+  };
+  if (notes) body.notes = notes;
+  try {
+    await apiPost('/performance', body);
+    showCreatePerformance(null);
+    await loadPerformance();
+  } catch (err) {
+    showError('performance-create-error', err.message);
+  } finally {
+    btn.disabled = false;
   }
 }
 
