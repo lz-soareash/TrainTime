@@ -6,6 +6,8 @@ let currentWorkoutExerciseId = null;
 let currentExerciseSportId = null;
 let currentExerciseId = null;
 let currentUserRole = null;
+let currentPageId = null;
+let pageNavToken = 0;
 
 function getToken() {
   return localStorage.getItem('traintime_token');
@@ -111,6 +113,8 @@ function showPage(pageId) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const target = document.getElementById(pageId);
   target.classList.add('active');
+  currentPageId = pageId;
+  pageNavToken++;
   const header = document.getElementById('app-header');
   const isAuth = target.classList.contains('page--auth');
   document.body.classList.toggle('app-shell', !isAuth);
@@ -164,6 +168,8 @@ function navQuick(target) {
     openPerformancePage();
     return;
   }
+  // Resposta imediata: o loadDashboard abaixo ainda leva varias requisicoes.
+  showPage('page-dashboard');
   loadDashboard();
 }
 
@@ -392,6 +398,13 @@ function handleLogout() {
 }
 
 async function loadDashboard() {
+  // Se o usuario navegar para outra pagina enquanto os dados carregam, o
+  // loadDashboard nao pode sobrescrever a navegacao dele ao terminar.
+  const navTokenAtStart = pageNavToken;
+  const goToDashboard = () => {
+    if (pageNavToken !== navTokenAtStart) return;
+    showPage('page-dashboard');
+  };
   try {
     const user = await apiGet('/auth/me');
     currentUserRole = user.role;
@@ -473,7 +486,7 @@ async function loadDashboard() {
       teamsError.hidden = false;
     }
 
-    showPage('page-dashboard');
+    goToDashboard();
   } catch (err) {
     // Os helpers api* ja tratam 401 limpando o token. Aqui nao deve
     // deslogar o usuario por um erro de rede ou de renderizacao.
@@ -493,7 +506,7 @@ async function loadDashboard() {
       `;
       teamsError.hidden = false;
     }
-    showPage('page-dashboard');
+    goToDashboard();
   }
 }
 
