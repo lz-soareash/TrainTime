@@ -73,3 +73,39 @@ class WorkoutExecutionDetailResponse(BaseModel):
     created_at: datetime | None = None
     updated_at: datetime | None = None
     exercise_results: list[ExerciseResultResponse] = []
+
+
+# ========== FASE 10: metricas realizadas, comparacao e previsao ==========
+
+class ExecutionDelta(BaseModel):
+    volume: float = 0.0
+    carga: float = 0.0
+    duracao_s: float | None = None
+
+
+class ExecutionSummaryItem(BaseModel):
+    id: int
+    status: str
+    started_at: datetime
+    finished_at: datetime | None = None
+    volume: float = 0.0
+    carga: float = 0.0
+    duracao_s: float | None = None
+    exercicios_planejados: int = 0
+    exercicios_feitos: int = 0
+    exercicios_pulados: int = 0
+    aderencia_pct: float = 0.0
+    delta: ExecutionDelta | None = None
+
+
+class ExecutionForecast(BaseModel):
+    volume: float = 0.0
+    carga: float = 0.0
+    duracao_s: float = 0.0
+    amostra: int = 0
+
+
+class WorkoutExecutionComparisonResponse(BaseModel):
+    workout_id: int
+    executions: list[ExecutionSummaryItem] = []
+    forecast: ExecutionForecast = ExecutionForecast()

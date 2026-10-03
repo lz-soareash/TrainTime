@@ -120,7 +120,15 @@ Workout → WorkoutExercise → WorkoutExerciseExecution (resultado)
 - Chave logica do resultado: `(execution_id, workout_exercise_id)`, com upsert
 - Uma execucao `in_progress` por atleta e por treino
 - Concluir gera `finished_at` e dispara a geracao automatica de performance
+  (`volume` e `carga`, sempre sobre valores realizados)
+- Geracao idempotente: as metricas automaticas da execucao sao apagadas antes de
+  regravadas, entao reconcluir/atualizar nao duplica
+- Execucao finalizada nao volta para `in_progress`
+- `workout_id` da URL e conferido contra `execution.workout_id` em toda rota por
+  `execution_id` (404 quando inconsistente)
 - Autorizacao: dono da execucao ou treinador da equipe do treino
+- `GET .../executions/summary` agrega por execucao: metricas realizadas, delta
+  contra a execucao anterior e previsao (media das 3 concluidas mais recentes)
 
 Detalhes em [EXECUTIONS.md](EXECUTIONS.md).
 
@@ -130,8 +138,9 @@ Detalhes em [EXECUTIONS.md](EXECUTIONS.md).
 Athlete → PerformanceRecord → WorkoutExecution (opcional)
 ```
 
-- Registros manuais (metric, value, notes) e automaticos (metrica `volume`)
-- `execution_id` e anulavel: um registro pode nao vir de execucao
+- Registros manuais (metric, value, notes) e automaticos (metricas `volume` e `carga`)
+- `execution_id` e anulavel: um registro pode nao vir de execucao, e tambem e
+  devolvido na resposta agregada
 - `GET /performance` e agregado: atleta ve o proprio, treinador ve os atletas
   das suas equipes (filtro por `team_athletes` + `teams.coach_id`)
 - Ambos ordenam por `recorded_at` decrescente

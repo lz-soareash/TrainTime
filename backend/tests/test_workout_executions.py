@@ -354,3 +354,287 @@ def test_distinct_exercises_keep_separate_results():
     by_we = {r["workout_exercise_id"]: r["actual_sets"] for r in results}
     assert by_we[we_a] == 4
     assert by_we[we_b] == 5
+
+
+# ========== FASE 10: metricas reais, escopo da URL e comparacao ==========
+
+def _perf_records(ath_token, metric=None):
+    resp = client.get("/api/performance", headers=auth_header(ath_token))
+    assert resp.status_code == 200
+    records = resp.json()
+    if metric:
+        records = [r for r in records if r["metric"] == metric]
+    return records
+
+
+def _setup_done_execution(suffix, sets=3, reps=12, weight=80.0):
+    """Execucao em andamento com 1 exercicio e resultado ja registrado."""
+    workout_id, execution_id, we_id, ath_token = _setup_exercise_with_result(suffix)
+    payload = {"status": "done", "actual_sets": sets, "actual_repetitions": reps}
+    if weight is not None:
+        payload["actual_weight_kg"] = weight
+    _post_result(workout_id, execution_id, we_id, ath_token, payload)
+    return workout_id, execution_id, we_id, ath_token
+
+
+# --- 1. workout_id da URL precisa bater com a execucao ---
+
+def test_get_execution_rejects_wrong_workout_in_url():
+    workout_id, ath_token = setup_execution_happy(
+        "coach_f10_g@test.com", "ath_f10_g@test.com")
+    execution_id = client.post(f"/api/workouts/{workout_id}/executions",
+                               headers=auth_header(ath_token), json={}).json()["id"]
+    resp = client.get(f"/api/workouts/{workout_id + 999}/executions/{execution_id}",
+                      headers=auth_header(ath_token))
+    assert resp.status_code == 404, "workout_id da URL foi ignorado"
+
+
+def test_update_execution_rejects_wrong_workout_in_url():
+    workout_id, ath_token = setup_execution_happy(
+        "coach_f10_u@test.com", "ath_f10_u@test.com")
+    execution_id = client.post(f"/api/workouts/{workout_id}/executions",
+                               headers=auth_header(ath_token), json={}).json()["id"]
+    resp = client.put(f"/api/workouts/{workout_id + 999}/executions/{execution_id}",
+                      headers=auth_header(ath_token), json={"notes": "x"})
+    assert resp.status_code == 404, "workout_id da URL foi ignorado"
+
+
+def test_exercise_result_rejects_wrong_workout_in_url():
+    workout_id, execution_id, we_id, ath_token = _setup_done_execution("urlres")
+    resp = _post_result(workout_id + 999, execution_id, we_id, ath_token,
+                        {"status": "done", "actual_sets": 1})
+    assert resp.status_code == 404, "workout_id da URL foi ignorado"
+
+
+def test_coach_get_execution_rejects_wrong_workout_in_url():
+    workout_id, ath_token = setup_execution_happy(
+        "coach_f10_c@test.com", "ath_f10_c@test.com")
+    execution_id = client.post(f"/api/workouts/{workout_id}/executions",
+                               headers=auth_header(ath_token), json={}).json()["id"]
+    coach_token = login(email="coach_f10_c@test.com").json()["access_token"]
+    resp = client.get(f"/api/workouts/{workout_id + 999}/executions/{execution_id}",
+                      headers=auth_header(coach_token))
+    assert resp.status_code == 404, "workout_id da URL foi ignorado"
+
+
+# --- 2. volume e carga usam valores REALIZADOS ---
+
+def test_volume_uses_actual_values_not_planned():
+    """Planejado 3x12 sem peso; realizado 5x10 com 40kg."""
+    workout_id, execution_id, we_id, ath_token = _setup_done_execution(
+        "vol", sets=5, reps=10, weight=40.0)
+    client.put(f"/api/workouts/{workout_id}/executions/{execution_id}",
+               headers=auth_header(ath_token), json={"status": "completed"})
+    volumes = _perf_records(ath_token, "volume")
+    assert len(volumes) == 1
+    assert volumes[0]["value"] == 50.0, "volume planejado (36) em vez do realizado (50)"
+
+
+def test_carga_is_generated_from_actual_weight():
+    workout_id, execution_id, we_id, ath_token = _setup_done_execution(
+        "carga", sets=5, reps=10, weight=40.0)
+    client.put(f"/api/workouts/{workout_id}/executions/{execution_id}",
+               headers=auth_header(ath_token), json={"status": "completed"})
+    cargas = _perf_records(ath_token, "carga")
+    assert len(cargas) == 1
+    assert cargas[0]["value"] == 2000.0, "5x10x40 = 2000"
+
+
+def test_no_carga_record_without_actual_weight():
+    workout_id, execution_id, we_id, ath_token = _setup_done_execution(
+        "semcarga", sets=4, reps=10, weight=None)
+    client.put(f"/api/workouts/{workout_id}/executions/{execution_id}",
+               headers=auth_header(ath_token), json={"status": "completed"})
+    assert _perf_records(ath_token, "carga") == []
+
+
+def test_skipped_exercise_does_not_add_volume():
+    workout_id, ath_token = setup_execution_happy(
+        "coach_f10_sk@test.com", "ath_f10_sk@test.com")
+    coach_token = login(email="coach_f10_sk@test.com").json()["access_token"]
+    exercise_id = create_exercise_helper(coach_token, "Ex Pulado").json()["id"]
+    we_id = add_we_helper(coach_token, workout_id, exercise_id).json()["id"]
+    execution_id = client.post(f"/api/workouts/{workout_id}/executions",
+                               headers=auth_header(ath_token), json={}).json()["id"]
+    _post_result(workout_id, execution_id, we_id, ath_token, {"status": "skipped"})
+    client.put(f"/api/workouts/{workout_id}/executions/{execution_id}",
+               headers=auth_header(ath_token), json={"status": "completed"})
+    assert _perf_records(ath_token, "volume") == [], "exercicio pulado contou volume"
+
+
+# --- 3. concluir duas vezes nao duplica desempenho ---
+
+def test_completing_twice_does_not_duplicate_performance():
+    workout_id, execution_id, we_id, ath_token = _setup_done_execution("dupperf")
+    for _ in range(3):
+        resp = client.put(f"/api/workouts/{workout_id}/executions/{execution_id}",
+                          headers=auth_header(ath_token),
+                          json={"status": "completed"})
+        assert resp.status_code == 200
+    assert len(_perf_records(ath_token, "volume")) == 1, "volume duplicado"
+    assert len(_perf_records(ath_token, "carga")) == 1, "carga duplicada"
+
+
+def test_cannot_reopen_completed_execution():
+    workout_id, execution_id, we_id, ath_token = _setup_done_execution("reopen")
+    client.put(f"/api/workouts/{workout_id}/executions/{execution_id}",
+               headers=auth_header(ath_token), json={"status": "completed"})
+    resp = client.put(f"/api/workouts/{workout_id}/executions/{execution_id}",
+                      headers=auth_header(ath_token),
+                      json={"status": "in_progress"})
+    assert resp.status_code == 400, "execucao concluida voltou para in_progress"
+
+
+# --- 4. resumo/comparacao/previsao ---
+
+def test_summary_returns_metrics_per_execution():
+    workout_id, execution_id, we_id, ath_token = _setup_done_execution("sum1")
+    client.put(f"/api/workouts/{workout_id}/executions/{execution_id}",
+               headers=auth_header(ath_token), json={"status": "completed"})
+    resp = client.get(f"/api/workouts/{workout_id}/executions/summary",
+                      headers=auth_header(ath_token))
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["workout_id"] == workout_id
+    assert len(data["executions"]) == 1
+    item = data["executions"][0]
+    assert item["id"] == execution_id
+    assert item["volume"] == 36.0
+    assert item["carga"] == 2880.0
+    assert item["exercicios_planejados"] == 1
+    assert item["exercicios_feitos"] == 1
+    assert item["aderencia_pct"] == 100.0
+    assert item["duracao_s"] is not None and item["duracao_s"] >= 0
+
+
+def test_summary_delta_compares_with_previous_execution():
+    workout_id, ath_token = setup_execution_happy(
+        "coach_f10_d@test.com", "ath_f10_d@test.com")
+    coach_token = login(email="coach_f10_d@test.com").json()["access_token"]
+    exercise_id = create_exercise_helper(coach_token, "Ex Delta").json()["id"]
+    we_id = add_we_helper(coach_token, workout_id, exercise_id).json()["id"]
+
+    e1 = client.post(f"/api/workouts/{workout_id}/executions",
+                     headers=auth_header(ath_token), json={}).json()["id"]
+    _post_result(workout_id, e1, we_id, ath_token,
+                 {"status": "done", "actual_sets": 3, "actual_repetitions": 10,
+                  "actual_weight_kg": 50.0})
+    client.put(f"/api/workouts/{workout_id}/executions/{e1}",
+               headers=auth_header(ath_token), json={"status": "completed"})
+
+    e2 = client.post(f"/api/workouts/{workout_id}/executions",
+                     headers=auth_header(ath_token), json={}).json()["id"]
+    _post_result(workout_id, e2, we_id, ath_token,
+                 {"status": "done", "actual_sets": 5, "actual_repetitions": 10,
+                  "actual_weight_kg": 50.0})
+    client.put(f"/api/workouts/{workout_id}/executions/{e2}",
+               headers=auth_header(ath_token), json={"status": "completed"})
+
+    data = client.get(f"/api/workouts/{workout_id}/executions/summary",
+                      headers=auth_header(ath_token)).json()
+    by_id = {e["id"]: e for e in data["executions"]}
+    assert by_id[e1]["volume"] == 30.0
+    assert by_id[e2]["volume"] == 50.0
+    assert by_id[e2]["delta"]["volume"] == 20.0
+    assert by_id[e1]["delta"] is None, "primeira execucao nao tem execucao anterior"
+    assert by_id[e2]["delta"]["carga"] == 1000.0, "50 reps x 50kg = 2500 - 1500"
+
+
+def test_summary_forecast_averages_completed_executions():
+    workout_id, ath_token = setup_execution_happy(
+        "coach_f10_f@test.com", "ath_f10_f@test.com")
+    coach_token = login(email="coach_f10_f@test.com").json()["access_token"]
+    exercise_id = create_exercise_helper(coach_token, "Ex Prev").json()["id"]
+    we_id = add_we_helper(coach_token, workout_id, exercise_id).json()["id"]
+    for sets in (3, 5):
+        eid = client.post(f"/api/workouts/{workout_id}/executions",
+                          headers=auth_header(ath_token), json={}).json()["id"]
+        _post_result(workout_id, eid, we_id, ath_token,
+                     {"status": "done", "actual_sets": sets,
+                      "actual_repetitions": 10})
+        client.put(f"/api/workouts/{workout_id}/executions/{eid}",
+                   headers=auth_header(ath_token), json={"status": "completed"})
+    data = client.get(f"/api/workouts/{workout_id}/executions/summary",
+                      headers=auth_header(ath_token)).json()
+    forecast = data["forecast"]
+    assert forecast["amostra"] == 2
+    assert forecast["volume"] == 40.0, "media de 30 e 50"
+
+
+def test_summary_ignores_executions_in_progress():
+    workout_id, ath_token = setup_execution_happy(
+        "coach_f10_i@test.com", "ath_f10_i@test.com")
+    client.post(f"/api/workouts/{workout_id}/executions",
+                headers=auth_header(ath_token), json={})
+    data = client.get(f"/api/workouts/{workout_id}/executions/summary",
+                      headers=auth_header(ath_token)).json()
+    assert data["forecast"]["amostra"] == 0
+    assert data["forecast"]["volume"] == 0.0
+
+
+def test_summary_limit_is_respected():
+    workout_id, ath_token = setup_execution_happy(
+        "coach_f10_l@test.com", "ath_f10_l@test.com")
+    coach_token = login(email="coach_f10_l@test.com").json()["access_token"]
+    exercise_id = create_exercise_helper(coach_token, "Ex Lim").json()["id"]
+    we_id = add_we_helper(coach_token, workout_id, exercise_id).json()["id"]
+    for _ in range(4):
+        eid = client.post(f"/api/workouts/{workout_id}/executions",
+                          headers=auth_header(ath_token), json={}).json()["id"]
+        _post_result(workout_id, eid, we_id, ath_token,
+                     {"status": "done", "actual_sets": 3, "actual_repetitions": 10})
+        client.put(f"/api/workouts/{workout_id}/executions/{eid}",
+                   headers=auth_header(ath_token), json={"status": "completed"})
+    data = client.get(f"/api/workouts/{workout_id}/executions/summary?limit=2",
+                      headers=auth_header(ath_token)).json()
+    assert len(data["executions"]) == 2
+
+
+def test_coach_summary_requires_athlete_id():
+    workout_id, ath_token = setup_execution_happy(
+        "coach_f10_cs@test.com", "ath_f10_cs@test.com")
+    coach_token = login(email="coach_f10_cs@test.com").json()["access_token"]
+    resp = client.get(f"/api/workouts/{workout_id}/executions/summary",
+                      headers=auth_header(coach_token))
+    assert resp.status_code == 400, "treinador sem athlete_id deveria ser barrado"
+
+
+def test_coach_summary_of_own_athlete():
+    workout_id, ath_token = setup_execution_happy(
+        "coach_f10_ca@test.com", "ath_f10_ca@test.com")
+    coach_token = login(email="coach_f10_ca@test.com").json()["access_token"]
+    eid = client.post(f"/api/workouts/{workout_id}/executions",
+                      headers=auth_header(ath_token), json={}).json()["id"]
+    client.put(f"/api/workouts/{workout_id}/executions/{eid}",
+               headers=auth_header(ath_token), json={"status": "completed"})
+    athlete_id = client.get("/api/athletes/me",
+                            headers=auth_header(ath_token)).json()["id"]
+    resp = client.get(
+        f"/api/workouts/{workout_id}/executions/summary?athlete_id={athlete_id}",
+        headers=auth_header(coach_token))
+    assert resp.status_code == 200
+    assert len(resp.json()["executions"]) == 1
+
+
+def test_coach_summary_rejects_athlete_from_other_team():
+    workout_id, ath_token = setup_execution_happy(
+        "coach_f10_x@test.com", "ath_f10_x@test.com")
+    # outro treinador com atleta proprio
+    setup_execution_happy("coach_f10_y@test.com", "ath_f10_y@test.com")
+    coach_x = login(email="coach_f10_x@test.com").json()["access_token"]
+    other_athlete_id = client.get(
+        "/api/athletes/me",
+        headers=auth_header(login(email="ath_f10_y@test.com").json()["access_token"])
+    ).json()["id"]
+    resp = client.get(
+        f"/api/workouts/{workout_id}/executions/summary?athlete_id={other_athlete_id}",
+        headers=auth_header(coach_x))
+    assert resp.status_code == 403
+
+
+def test_performance_aggregate_exposes_execution_id():
+    workout_id, execution_id, we_id, ath_token = _setup_done_execution("execid")
+    client.put(f"/api/workouts/{workout_id}/executions/{execution_id}",
+               headers=auth_header(ath_token), json={"status": "completed"})
+    volumes = _perf_records(ath_token, "volume")
+    assert volumes[0]["execution_id"] == execution_id

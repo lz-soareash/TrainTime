@@ -30,6 +30,7 @@ class PerformanceAggregateResponse(BaseModel):
     id: int
     athlete_id: int
     athlete_name: str
+    execution_id: Optional[int] = None
     metric: str
     value: float
     recorded_at: datetime

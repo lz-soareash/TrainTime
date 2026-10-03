@@ -40,19 +40,27 @@ Ambas ordenam por `recorded_at` decrescente.
 O filtro por `athlete_id` do service so e aceito para treinador; para atleta
 dispara `PermissionError` (403).
 
-## Metrica `volume`
+## Metricas automaticas `volume` e `carga`
 
-Gerada por `_generate_performance` ao concluir uma execucao, uma por exercicio
-com status `done`. Hoje usa os valores planejados:
+Geradas por `_generate_performance` ao concluir uma execucao. Desde a Fase 10
+usam **sempre** os valores realizados (`WorkoutExerciseExecution`), nunca o
+planejado, e a gravacao e idempotente (as metricas automaticas da execucao sao
+removidas antes de regravadas).
+
+Por exercicio com `status = done`:
 
 ```
-sets * repetitions   -> se ambos existirem
-duration_seconds     -> caso contrario
-distance_meters      -> caso contrario
+volume = actual_sets * actual_repetitions
+         (ou actual_duration_seconds / actual_distance_meters, se nao houver series/reps)
+carga  = volume * actual_weight_kg   -> so quando houver peso registrado
 ```
 
-Ver a observacao em EXECUTIONS.md: o correto seria usar
-`actual_sets`/`actual_repetitions`.
+Exercicio `skipped`/`pending` nao gera registro. Metricas manuais
+(`execution_id` nulo) nunca sao tocadas por esse processo.
+
+`GET /performance` expoe `execution_id` em cada registro, o que permite ligar a
+metrica a execucao de origem. Resumo por execucao, deltas e previsao ficam em
+`GET /workouts/{workout_id}/executions/summary` (ver EXECUTIONS.md).
 
 ## Frontend
 

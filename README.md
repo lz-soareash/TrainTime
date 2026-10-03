@@ -102,12 +102,20 @@ pytest tests/ -v
   - Registrar resultado por exercicio (series, reps, peso, duracao, distancia)
   - Marcar exercicio como feito ou pulado
   - Concluir ou cancelar a execucao
+  - Execucao concluida/cancelada nao pode voltar para `in_progress`
   - Pagina de execucao no frontend com planejado x realizado por exercicio
+  - **Metricas realizadas (Fase 10):** `volume` e `carga` saem dos valores **realizados**, nunca do planejado; exercicio pulado nao conta; sem peso registrado nao ha carga
+  - **Escopo da URL:** `workout_id` da URL e validado contra a execucao em todas as rotas (404 se nao pertencer)
+  - **Previsao e comparacao:** `GET /workouts/{id}/executions/summary` traz as ultimas execucoes com volume, carga, duracao, aderencia, delta vs. execucao anterior e previsao (media das 3 ultimas concluidas)
+  - Treinador consulta o resumo informando `athlete_id` e so de atletas das suas equipes (400 sem o parametro, 403 fora da equipe)
+  - Registro automatico de metricas na conclusao e idempotente (reconcluir/atualizar nao duplica)
+  - Card "Previsao e comparacao" na pagina de execucao no frontend
 - **Desempenho (Performance):**
   - Atleta registra metricas manualmente (peso, altura, circunferencia, etc.)
   - Historico pessoal em `GET /performance/records`
   - Visao agregada em `GET /performance` (atleta: proprios dados; treinador: apenas atletas das suas equipes)
-  - Registro automatico de metricas `volume` ao concluir uma execucao
+  - Registro automatico de metricas `volume` **e `carga`** ao concluir uma execucao
+  - `GET /performance` expoe `execution_id` para ligar a metrica a execucao de origem
   - Pagina de desempenho no frontend com filtros por metrica
   - Card "Performance" e item de menu "Desempenho" liberados
 - **Correcoes de bugs criticos encontrados em testes de integracao da Fase 9:**

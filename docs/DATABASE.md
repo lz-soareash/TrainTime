@@ -108,12 +108,18 @@ SportAttribute (1) ──→ (many) Goal
 - Status do resultado: pending, done, skipped
 - `completed_at` e preenchido ao virar `done` e zerado ao sair de `done`
 - Concluir a execucao dispara a geracao automatica de `PerformanceRecord`
+- Execucao `completed`/`cancelled` nao volta para `in_progress`
+- O `workout_id` da URL precisa bater com `execution.workout_id` (404 caso contrario)
 
 ## Regras de Desempenho
 
 - Apenas atleta registra desempenho, e sempre para si mesmo
 - `execution_id` e opcional: registros manuais podem nao vir de execucao
-- Metrica `volume` e gerada automaticamente ao concluir uma execucao
+- Metricas `volume` e `carga` sao geradas automaticamente ao concluir uma execucao,
+  sempre a partir dos valores **realizados** do resultado (exercicio `skipped` nao conta)
+- `carga` so e gravada quando ha `actual_weight_kg`
+- A geracao e idempotente por `(execution_id, metric)`: as metricas automaticas
+  da execucao sao removidas antes de regravadas
 - Atleta ve apenas os proprios registros
 - Treinador ve apenas registros de atletas de pelo menos uma de suas equipes
 - Registrar desempenho de outro atleta exige ser treinador da equipe dele

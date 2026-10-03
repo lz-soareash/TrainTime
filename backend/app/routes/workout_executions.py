@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database.connection import get_db
@@ -7,6 +7,7 @@ from app.models.models import User
 from app.schemas.workout_execution import (
     WorkoutExecutionCreate, WorkoutExecutionUpdate, ExerciseResultUpdate,
     WorkoutExecutionResponse, WorkoutExecutionDetailResponse, ExerciseResultResponse,
+    WorkoutExecutionComparisonResponse,
 )
 from app.services import workout_execution_service as wes
 
@@ -82,6 +83,39 @@ def list_executions(
     raise HTTPException(status_code=403, detail="Acesso negado")
 
 
+@router.get("/summary", response_model=WorkoutExecutionComparisonResponse)
+def execution_summary(
+    workout_id: int,
+    athlete_id: int | None = Query(
+        None, description="Obrigatorio para treinador; opcional para atleta"),
+    limit: int = Query(5, ge=1, le=20),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Historico do treino com volume/carga realizados, deltas e previsao."""
+    if current_user.role == "athlete":
+        athlete = current_user.athlete
+        if not athlete:
+            raise HTTPException(status_code=404, detail="Perfil de atleta nao encontrado")
+        target_athlete_id = athlete.id
+    elif current_user.role == "coach":
+        coach = current_user.coach
+        if not coach:
+            raise HTTPException(status_code=404, detail="Perfil de treinador nao encontrado")
+        if athlete_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Informe athlete_id: o resumo e por atleta",
+            )
+        if not wes.coach_owns_athlete(db, coach.id, athlete_id):
+            raise HTTPException(status_code=403, detail="Acesso negado")
+        target_athlete_id = athlete_id
+    else:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+
+    return wes.compare_executions(db, target_athlete_id, workout_id, limit)
+
+
 @router.get("/{execution_id}", response_model=WorkoutExecutionDetailResponse)
 def get_execution(
     workout_id: int,
@@ -94,12 +128,12 @@ def get_execution(
             athlete = current_user.athlete
             if not athlete:
                 raise HTTPException(status_code=404, detail="Perfil de atleta nao encontrado")
-            execution = wes.get_execution_athlete(db, execution_id, athlete.id)
+            execution = wes.get_execution_athlete(db, execution_id, athlete.id, workout_id)
         elif current_user.role == "coach":
             coach = current_user.coach
             if not coach:
                 raise HTTPException(status_code=404, detail="Perfil de treinador nao encontrado")
-            execution = wes.get_execution_coach(db, execution_id, coach.id)
+            execution = wes.get_execution_coach(db, execution_id, coach.id, workout_id)
         else:
             raise HTTPException(status_code=403, detail="Acesso negado")
         return format_execution_detail(execution)
@@ -122,7 +156,7 @@ def update_execution(
         raise HTTPException(status_code=404, detail="Perfil de atleta nao encontrado")
     try:
         execution = wes.update_execution(
-            db, execution_id, athlete.id,
+            db, execution_id, athlete.id, workout_id=workout_id,
             status=data.status, notes=data.notes, finished_at=data.finished_at,
         )
         return format_execution_detail(execution)
@@ -149,6 +183,7 @@ def add_exercise_result(
     try:
         result = wes.add_exercise_result(
             db, execution_id, athlete.id, workout_exercise_id,
+            workout_id=workout_id,
             status=data.status, actual_sets=data.actual_sets,
             actual_repetitions=data.actual_repetitions,
             actual_duration_seconds=data.actual_duration_seconds,

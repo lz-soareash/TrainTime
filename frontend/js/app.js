@@ -2062,6 +2062,7 @@ async function openExecution(executionId, workoutId) {
     empty.style.display = 'none';
     showExecutionError(err.message);
   }
+  loadExecutionSummary(workoutId);
 }
 
 async function saveExerciseResult(workoutExerciseId, status, btn) {
@@ -2116,6 +2117,114 @@ function completeExecution() {
 
 function cancelExecution() {
   return setExecutionStatus('cancelled');
+}
+
+/* ============================================================
+   WORKOUT EXECUTION -previsao e comparacao (Fase 10)
+   ============================================================ */
+
+function formatNumber(value) {
+  if (value == null) return '—';
+  return Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+}
+
+function formatDuration(seconds) {
+  if (seconds == null) return '—';
+  const total = Math.round(seconds);
+  const min = Math.floor(total / 60);
+  const seg = total % 60;
+  return min ? `${min}min ${String(seg).padStart(2, '0')}s` : `${seg}s`;
+}
+
+function deltaBadge(value, suffix) {
+  if (value == null) return '';
+  const n = Number(value);
+  const cls = n > 0 ? 'up' : n < 0 ? 'down' : 'flat';
+  const sign = n > 0 ? '+' : '';
+  return `<span class="exec-delta exec-delta--${cls}">${sign}${formatNumber(n)}${suffix}</span>`;
+}
+
+function forecastTile(label, value, unit) {
+  return `
+    <div class="exec-forecast-tile">
+      <span class="exec-forecast-label">${label}</span>
+      <span class="exec-forecast-value">${value}<span class="exec-forecast-unit">${unit}</span></span>
+    </div>`;
+}
+
+async function loadExecutionSummary(workoutId) {
+  const card = document.getElementById('execution-summary-card');
+  const loading = document.getElementById('execution-summary-loading');
+  const forecast = document.getElementById('execution-forecast');
+  const history = document.getElementById('execution-history');
+  const empty = document.getElementById('execution-summary-empty');
+  const errorEl = document.getElementById('execution-summary-error');
+  const sample = document.getElementById('execution-forecast-sample');
+
+  card.style.display = 'block';
+  loading.style.display = 'grid';
+  loading.innerHTML = skeletonCards(3);
+  forecast.innerHTML = '';
+  history.innerHTML = '';
+  empty.style.display = 'none';
+  errorEl.hidden = true;
+  errorEl.innerHTML = '';
+
+  try {
+    const data = await apiGet(`/workouts/${workoutId}/executions/summary?limit=5`);
+    loading.style.display = 'none';
+
+    const f = data.forecast || {};
+    forecast.innerHTML =
+      forecastTile('Volume médio', formatNumber(f.volume), '') +
+      forecastTile('Carga média', formatNumber(f.carga), 'kg') +
+      forecastTile('Duração média', formatDuration(f.duracao_s), '');
+    sample.textContent = f.amostra
+      ? `Média de ${f.amostra} execuç${f.amostra > 1 ? 'ões' : 'ão'}`
+      : 'Sem histórico ainda';
+
+    const executions = data.executions || [];
+    if (executions.length === 0) {
+      history.style.display = 'none';
+      empty.style.display = 'flex';
+      empty.innerHTML = emptyStateHTML('📈', 'Ainda não há execuções', 'Conclua um treino para ver a comparação e a previsão da próxima sessão.');
+      return;
+    }
+
+    history.style.display = 'flex';
+    empty.style.display = 'none';
+    history.innerHTML = executions.map(e => {
+      const done = e.status === 'completed';
+      const date = new Date(e.started_at).toLocaleDateString('pt-BR');
+      return `
+        <div class="exec-history-item ${done ? '' : 'exec-history-item--open'}">
+          <div class="exec-history-head">
+            <span class="exec-history-date">${date}</span>
+            <span class="exec-item-status exec-item-status--${e.status}">${done ? 'Concluído' : 'Em andamento'}</span>
+          </div>
+          <div class="exec-history-metrics">
+            <span class="exec-history-metric">Volume <strong>${formatNumber(e.volume)}</strong></span>
+            <span class="exec-history-metric">Carga <strong>${formatNumber(e.carga)} kg</strong></span>
+            <span class="exec-history-metric">Duração <strong>${formatDuration(e.duracao_s)}</strong></span>
+            <span class="exec-history-metric">Aderência <strong>${formatNumber(e.aderencia_pct)}%</strong></span>
+          </div>
+          ${e.delta ? `
+          <div class="exec-history-deltas">
+            <span class="exec-delta-label">vs. anterior</span>
+            ${deltaBadge(e.delta.volume, '')}
+            ${deltaBadge(e.delta.carga, ' kg')}
+          </div>` : ''}
+        </div>`;
+    }).join('');
+  } catch (err) {
+    loading.style.display = 'none';
+    forecast.innerHTML = '';
+    history.style.display = 'none';
+    empty.style.display = 'none';
+    sample.textContent = '';
+    errorEl.hidden = false;
+    errorEl.innerHTML = `<span class="error-icon" aria-hidden="true">⚠️</span><p>${err.message}</p>`;
+  }
 }
 
 /* ============================================================

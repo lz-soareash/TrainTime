@@ -1102,6 +1102,20 @@
                 <button class="btn btn-ghost" onclick="cancelExecution()">Cancelar</button>
               </div>
             </div>
+
+            <div class="card page-card" id="execution-summary-card">
+              <div class="section-head">
+                <h2 class="section-title">Previsão e comparação</h2>
+                <span class="meta-chip" id="execution-forecast-sample"></span>
+              </div>
+              <p class="exec-meta">Média das últimas execuções concluídas, calculada apenas com o que você realmente fez.</p>
+
+              <div id="execution-forecast" class="exec-forecast"></div>
+              <div id="execution-summary-loading" class="skeleton-grid" style="display:none"></div>
+              <div id="execution-history" class="list-stack"></div>
+              <div id="execution-summary-empty" class="empty-state" style="display:none"></div>
+              <div id="execution-summary-error" class="error-state" role="alert" hidden></div>
+            </div>
           </div>
         </div>
 
